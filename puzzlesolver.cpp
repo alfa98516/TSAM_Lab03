@@ -1,9 +1,7 @@
 #include <iostream>
 #include <string>
 
-namespace
-{
-} // namespace
+namespace {} // namespace
 
 /**
  * @brief Main function that scans a given IPv4 address for open UDP ports in
@@ -13,12 +11,10 @@ namespace
  * the low port, and argv[3] is the high port.
  * @return 0 on success, 1 on failure.
  */
-int main(int argc, const char *argv[])
-{
-    if (argc != 4)
-    {
+int main(int argc, const char* argv[]) {
+    if (argc != 6) {
         std::cerr << "Usage:" << argv[0]
-                  << " <IPv4 address> <low port> <high port>\n";
+                  << " <IPv4 address> <port 1> <port 2> <port 3> <port 4>\n";
         return 1;
     }
 
