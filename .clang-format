@@ -1,0 +1,14 @@
+---
+BasedOnStyle: LLVM # The most popular C++ coding style
+BreakBeforeBraces: Attach # Keep opening braces on the same line
+PointerAlignment: Left # Align pointers to the left
+
+# Other common preferences (but aren't THE standard):
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 80
+# These are my preferences, teehee. They're pretty common standards, but 
+# they're not universal.
+AllowShortFunctionsOnASingleLine: Empty 
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
