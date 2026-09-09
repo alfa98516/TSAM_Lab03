@@ -26,4 +26,10 @@ int main(int argc, const char* argv[]) {
         "I am the guardian of the secret spell. The lords of the network do ";
     const std::string msg_dragon_port_knocking =
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for ";
+
+    //for (int i = 2; i < 6; i++) {
+        // TODO: Decide which puzzle the port is for using the received message
+        // and the above constant strings, then call the appropriate puzzle
+        // function.
+    //}
 }
