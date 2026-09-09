@@ -13,8 +13,7 @@ namespace {} // namespace
  */
 int main(int argc, const char* argv[]) {
     if (argc != 4) {
-        std::cerr << "Usage:" << argv[0]
-                  << " <IPv4 address> <low port> <high port>\n";
+        std::cerr << "Usage:" << argv[0] << " <IPv4 address> <low port> <high port>\n";
         return 1;
     }
 
@@ -32,7 +31,7 @@ int main(int argc, const char* argv[]) {
         "message with your group id and sigil you got from S.E.C.R.E.T. Make "
         "sure to wrap the scrolls the same way I did and don't forget to "
         "address them accordingly.";
-        const std::string msg_dragon_port_knocking =
+    const std::string msg_dragon_port_knocking =
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "
         "Guarded Online Networks.";
-    }
+}
