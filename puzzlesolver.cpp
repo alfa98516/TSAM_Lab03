@@ -1,7 +1,9 @@
 #include <iostream>
 #include <string>
 
-namespace {} // namespace
+namespace
+{
+} // namespace
 
 /**
  * @brief Main function that scans a given IPv4 address for open UDP ports in
@@ -11,28 +13,21 @@ namespace {} // namespace
  * the low port, and argv[3] is the high port.
  * @return 0 on success, 1 on failure.
  */
-int main(int argc, const char* argv[]) {
-    if (argc != 4) {
+int main(int argc, const char *argv[])
+{
+    if (argc != 4)
+    {
         std::cerr << "Usage:" << argv[0]
                   << " <IPv4 address> <low port> <high port>\n";
         return 1;
     }
 
     const std::string msg_secret_port =
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay "
-        "for Enchanted Transmissions)!";
+        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ";
     const std::string msg_evil_port =
-        "The dark arts of network programming lead to powers some consider to "
-        "be...unnatural. I am an evil port, I shall speak only with evil "
-        "entities! (https://en.wikipedia.org/wiki/Evil_bit)";
+        "The dark arts of network programming lead to powers some consider to ";
     const std::string msg_ipv6_secret =
-        "I am the guardian of the secret spell. The lords of the network do "
-        "not want us to use these newer scrolls (IPv6), but I found a way. "
-        "Respond in the same manner and tell who you are! Send me a 5-byte "
-        "message with your group id and sigil you got from S.E.C.R.E.T. Make "
-        "sure to wrap the scrolls the same way I did and don't forget to "
-        "address them accordingly.";
-        const std::string msg_dragon_port_knocking =
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "
-        "Guarded Online Networks.";
-    }
+        "I am the guardian of the secret spell. The lords of the network do ";
+    const std::string msg_dragon_port_knocking =
+        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for ";
+}
