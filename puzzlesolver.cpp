@@ -34,7 +34,7 @@ int main(int argc, const char* argv[]) {
     //}
 }
 
-void puzzleA() {}
-void puzzleB() {}
-void puzzleC() {}
-void puzzleD() {}
+void solve_puzzle_a() {}
+void solve_puzzle_b() {}
+void solve_puzzle_c() {}
+void solve_puzzle_d() {}
