@@ -184,8 +184,7 @@ void solve_puzzle_a() {
     const int secret_number = 1<<31 - 1; 
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
-    // Where Mersenne prime is the collection of primes which satisfy this condition;
-    // 2^n - 1
+    // Where Mersenne prime is the collection of primes of the form 2^n - 1
 
 }
 
