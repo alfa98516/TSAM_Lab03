@@ -62,8 +62,8 @@ int main(int argc, const char* argv[]) {
         if (recieved.find(port_messages[i]) != std::string::npos) {
             problem_ports[i] = recieved;
         }
-        
     }
+    std::array<std::string, 4> problem_ports = assign_problems_to_port();
 }
 /**
  * @brief Functions that assigns each port to the given problem
