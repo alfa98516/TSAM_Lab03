@@ -139,8 +139,19 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @returns: A string
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+    constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
+        return "ERROR";
+    }
+    if (msg == nullptr) {
+        std::cerr << "Message is null\n";
+        return "ERROR";
+    }
+
+    const std::size_t msg_length = strnlen(msg, max_msg_length);
+    if (msg_length == max_msg_length) {
+        std::cerr << "Message is not null-terminated within the allowed size\n";
         return "ERROR";
     }
 
@@ -166,7 +177,7 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     for (int i = 0; i < 5; i++) {
         ip_addr.sin_port = htons(port);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        if (sendto(socket_fd, msg, strlen(msg), 0, (struct sockaddr*)&ip_addr,
+        if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
                    src_addr_len) < 0) {
             continue;
         }
