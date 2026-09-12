@@ -38,6 +38,7 @@
 *.exe
 *.out
 *.app
+puzzlesolver
 
 # Build directories
 build/

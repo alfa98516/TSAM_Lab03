@@ -189,7 +189,7 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
  * example; the port with problem a is in index 0 of the array,
  * problem b is in index 1, etc.
  */
-std::array<std::string, 4> assign_problems_to_port() {
+std::array<std::string, 4> assign_puzzle_to_port() {
 
     std::array<std::string, 4> port_messages = {
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
@@ -203,7 +203,7 @@ std::array<std::string, 4> assign_problems_to_port() {
     for (int i = 0; i < 4; i++) {
         // TODO: needs changing to actual recieve from function thats yet to be
         // implemented
-        std::string recieved = dummy_recieve(i);
+        std::string recieved = send_recv(i);
 
         // If the there isn't a match, the find function will return the null
         // position,
@@ -247,11 +247,12 @@ int main(int argc, const char* argv[]) {
 
     const char* ip_addr = argv[1];
 
-    // std::array<int, 4> input_ports;
-    //
-    // for (int i = 0; i < 4; i++) {
-    //     int curr_port = parse_port(argv[i], 2);
-    // }
+    std::array<int, 4> input_ports;
+
+    for (int i = 2; i < 6; i++) {
+        int curr_port = parse_port(argv[i], 2);
+        input_ports[i - 2] = curr_port;
+    }
 
     struct sockaddr_in dest_addr{};
     dest_addr.sin_family = AF_INET;
@@ -265,7 +266,6 @@ int main(int argc, const char* argv[]) {
         perror("inet_pton");
         return 1;
     }
-    std::array<std::string, 4> problem_ports = assign_problems_to_port();
-    std::string msg = send_recv(dest_addr, 4033, "hi");
-    std::cout << msg << '\n';
+
+    std::array<std::string, 4> puzzle_ports = assign_puzzle_to_port();
 }
