@@ -2,6 +2,7 @@
 #include <array>
 #include <cerrno>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -155,12 +156,12 @@ char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
         return "ERROR";
     }
 
-    char data_buffer[2048];
+    char* data_buffer = (char*)malloc(2048);
     socklen_t src_addr_len = sizeof(ip_addr);
 
     for (int i = 0; i < 5; i++) {
         ip_addr.sin_port = htons(port);
-        if (sendto(socket_fd, msg, sizeof(msg), 0, (struct sockaddr*)&ip_addr,
+        if (sendto(socket_fd, msg, strlen(msg), 0, (struct sockaddr*)&ip_addr,
                    src_addr_len) < 0) {
             continue;
         }
