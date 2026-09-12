@@ -215,16 +215,26 @@ std::array<std::string, 4> assign_problems_to_port() {
     return problem_ports;
 }
 
-int secret_sigil;
+int sigil;
+int group_id;
 
 void solve_puzzle_a() {
-
-    const uint32_t secret_number = (1 << 31) - 1;
+    
+    const int secret_number = 1 << 31 - 1;
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
+    
+    char[43] send_message = 
+        "S.E.C.R.E.T.:gislih24,alfaR24,hlynurh24,%s", secret_number
+    
+    char[4] message = send_recv(send_message)
+    
+    std::uint32_t y;
+    std::memcpy(&y, buf + n - 4, sizeof y);
+    group_id = message[0]
+    char challenge_number = message[]
 }
-
 void solve_puzzle_b() {}
 void solve_puzzle_c() {}
 void solve_puzzle_d() {}
