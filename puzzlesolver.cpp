@@ -46,23 +46,6 @@ int main(int argc, const char* argv[]) {
         int curr_port = parse_port(argv[i], 2);
     }
 
-    std::array<std::string, 4> port_messages = {
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
-        "The dark arts of network programming lead to powers some consider to ",
-        "I am the guardian of the secret spell. The lords of the network do ",
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
-
-    std::array<std::string, 4> problem_ports;
-
-    for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recieve from function thats yet to be implemented
-        std::string recieved = dummy_recieve(i);
-
-        // If the there isn't a match, the find function will return the null position,
-        if (recieved.find(port_messages[i]) != std::string::npos) {
-            problem_ports[i] = recieved;
-        }
-    }
     std::array<std::string, 4> problem_ports = assign_problems_to_port();
 }
 /**
