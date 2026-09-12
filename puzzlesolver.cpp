@@ -1,6 +1,14 @@
+#include <arpa/inet.h>
 #include <array>
+#include <asm-generic/socket.h>
+#include <bits/types/struct_timeval.h>
+#include <cerrno>
 #include <iostream>
+#include <netinet/in.h>
 #include <string>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace {
 /**
@@ -76,6 +84,77 @@ std::array<std::string, 4> assign_problems_to_port() {
         }
     }
     return problem_ports;
+}
+
+/**
+ * @brief
+ *
+ * @param[[TODO:direction]] ip_addr [TODO:description]
+ * @param[[TODO:direction]] port [TODO:description]
+ * @param[[TODO:direction]] msg [TODO:description]
+ */
+std::string send_recv(const std::string& ip_addr, int port,
+                      const std::string& msg) {
+    if (port < 0 || port > 65535) {
+        std::cerr << "Port numbers range between 0 and 65535\n";
+        return "ERROR";
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 1;
+
+    struct sockaddr_in dest_addr{};
+    dest_addr.sin_family = AF_INET;
+
+    int inet_pton_result =
+        inet_pton(AF_INET, ip_addr.c_str(), &dest_addr.sin_addr);
+    if (inet_pton_result == 0) {
+    }
+
+    if (inet_pton_result < 0) {
+        perror("inet_pton");
+        return "ERROR";
+    }
+
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0) {
+        perror("Error Creating socket!");
+        close(socket_fd);
+        return "ERROR";
+    }
+
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                   sizeof(timeout)) < 0) {
+        close(socket_fd);
+        return "ERROR";
+    }
+
+    char data_buffer[2048];
+    struct sockaddr_in src_addr{};
+    socklen_t src_addr_len = sizeof(src_addr);
+
+    for (int i = 0; i < 5; i++) {
+        dest_addr.sin_port = htons(port);
+        if (sendto(socket_fd, msg.c_str(), msg.length(), 0,
+                   (struct sockaddr*)&dest_addr, src_addr_len) < 0) {
+            continue;
+        }
+    }
+
+    while (true) {
+        ssize_t nbytes_recieved =
+            recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
+                     (struct sockaddr*)&src_addr, &src_addr_len);
+        if (nbytes_recieved < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::cout << "No response from port " << port << '\n';
+                break;
+            }
+            continue;
+        } else {
+            return std::string(data_buffer, nbytes_recieved);
+        }
+    }
 }
 
 // TODO: Remove this and implement actual recieved function
