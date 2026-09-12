@@ -1,13 +1,12 @@
 #include <arpa/inet.h>
 #include <array>
-#include <asm-generic/socket.h>
-#include <bits/types/struct_timeval.h>
 #include <cerrno>
 #include <iostream>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <string>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -241,7 +240,6 @@ int main(int argc, const char* argv[]) {
 
     const char* ip_addr = argv[1];
 
-    std::array<int, 4> input_ports;
     std::array<int, 4> input_ports;
 
     for (int i = 0; i < 4; i++) {
