@@ -1,6 +1,10 @@
+#include <arpa/inet.h>
 #include <array>
 #include <iostream>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <string>
+#include <unistd.h>
 
 namespace {
 /**
@@ -18,6 +22,87 @@ int parse_port(const char* argument, int argument_number) {
         std::cerr << "Argument " << argument_number << " is too large\n";
     }
     return -1;
+}
+
+/**
+ * @brief Scans the given IPv4 address for open UDP ports in the specified
+ * range.
+ * @param ip_addr The IPv4 address to scan.
+ * @param low_port The lower bound of the port range to scan.
+ * @param high_port The upper bound of the port range to scan.
+ * @return 0 on success, 1 on failure.
+ */
+std::string get_port_message(const char* ip_addr, int port_num) {
+    const std::string payload = "TSAM_PAYLOAD";
+
+    timeval timeout{};
+    timeout.tv_sec = 1; // Time to wait in seconds.
+
+    struct sockaddr_in dest_addr{}; // Destination IPv4 address.
+    dest_addr.sin_family = AF_INET; // Set address family to IPv4.
+    // Validate IP.
+    int inet_pton_result = inet_pton(AF_INET, ip_addr, &dest_addr.sin_addr);
+
+    // Check if the address is valid.
+    if (inet_pton_result == 0) {
+        std::cerr << "Invalid IPv4 address: " << ip_addr << '\n';
+        return {};
+    }
+
+    // Check if there was an error in converting the IPv4 address.
+    if (inet_pton_result < 0) {
+        perror("inet_pton");
+        return {};
+    }
+
+    // Create UDP socket.
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    // Validate socket creation.
+    if (sock < 0) {
+        perror("Error creating socket!");
+        close(sock);
+        return {};
+    }
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) <
+        0) {
+        close(sock);
+        return {};
+    }
+
+    char data_buffer[2048];
+    struct sockaddr_in src_addr{};
+    socklen_t src_addr_len = sizeof(src_addr);
+
+    // Send 5 packets to the port.
+    for (int i = 0; i < 5; i++) {
+        if (sendto(sock, payload.c_str(), payload.length() .0,
+                   (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
+            continue;
+        }
+    }
+    while (true) {
+        ssize_t n_bytes_received =
+            recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
+                     (struct sockaddr*)&src_addr, &src_addr_len);
+        if (n_bytes_received < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
+            perror("recvfrom");
+            continue;
+        } else {
+            open_ports[ntohs(src_addr.sin_port) - low_port] = true;
+            continue;
+        }
+    }
+    close(sock);
+    std::cout << "\nOpen ports:\n";
+    for (int i = 0; i < port_count; i++) {
+        if (open_ports[i]) {
+            std::cout << i + low_port << '\n';
+        }
+    }
+    return the_return_messaggeasdlækfj
 }
 
 } // namespace
