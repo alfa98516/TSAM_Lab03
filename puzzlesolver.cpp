@@ -176,7 +176,8 @@ namespace {
         
         std::array<std::string, 4> problem_ports = assign_problems_to_port();
     }
-    void solve_puzzle_a() {}
-    void solve_puzzle_b() {}
-    void solve_puzzle_c() {}
+
+void solve_puzzle_a() {}
+void solve_puzzle_b() {}
+void solve_puzzle_c() {}
 void solve_puzzle_d() {}
