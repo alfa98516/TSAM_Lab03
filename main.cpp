@@ -203,9 +203,29 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     return "NO_RESPONSE";
 }
 
+/*
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for
+Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID,
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret. May the
+   Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+*/
 void solve_puzzle_secret() {
-
-    const uint32_t secret_number = (1u << 31) - 1;
+    constexpr uint32_t secret_number = (1u << 31) - 1;
     std::cout << secret_number << '\n';
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
