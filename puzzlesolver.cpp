@@ -57,16 +57,13 @@ int main(int argc, const char* argv[]) {
     for (int i = 0; i < 4; i++) {
         // TODO: needs changing to actual recieve from function thats yet to be implemented
         std::string recieved = dummy_recieve(i);
+
+        // If the there isn't a match, the find function will return the null position,
         if (recieved.find(port_messages[i]) != std::string::npos) {
             problem_ports[i] = recieved;
         }
         
     }
-    // for (int i = 2; i < 6; i++) {
-    //  TODO: Decide which puzzle the port is for using the received message
-    //  and the above constant strings, then call the appropriate puzzle
-    //  function.
-    //}
 }
 
 
