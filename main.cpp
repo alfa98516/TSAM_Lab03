@@ -195,7 +195,6 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
 void solve_puzzle_secret() {
 
     const uint32_t secret_number = (1u << 31) - 1;
-    std::cout << secret_number << '\n';
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
