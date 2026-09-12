@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -10,7 +11,9 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <thread>
 #include <unistd.h>
+#include <utility>
 
 namespace {
 
@@ -104,6 +107,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
             continue;
         }
     }
+
     std::string returned_message;
     while (true) {
         ssize_t n_bytes_received =
@@ -134,7 +138,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -156,11 +160,12 @@ char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
         return "ERROR";
     }
 
-    char* data_buffer = (char*)malloc(2048);
+    char data_buffer[2048];
     socklen_t src_addr_len = sizeof(ip_addr);
 
     for (int i = 0; i < 5; i++) {
         ip_addr.sin_port = htons(port);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (sendto(socket_fd, msg, strlen(msg), 0, (struct sockaddr*)&ip_addr,
                    src_addr_len) < 0) {
             continue;
@@ -178,11 +183,26 @@ char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
             }
             continue;
         } else {
-            return data_buffer;
+            if (nbytes_recieved >= 2048) {
+                return "ERROR";
+            }
+            return std::string(data_buffer, nbytes_recieved);
         }
     }
     return "NO_RESPONSE";
 }
+
+void solve_puzzle_secret() {
+
+    const uint32_t secret_number = (1u << 31) - 1;
+    std::cout << secret_number << '\n';
+    // fun fact, this is a prime,
+    // More formally, this is the eight Mersenne prime,
+    // Where Mersenne prime is the collection of primes of the form 2^n - 1
+}
+void solve_puzzle_evil() {}
+void solve_puzzle_guardian() {}
+void solve_puzzle_dragon() {}
 
 /**
  * @brief Functions that assigns each port to the given problem
@@ -190,8 +210,8 @@ char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
  * example; the port with problem a is in index 0 of the array,
  * problem b is in index 1, etc.
  */
-std::array<std::string, 4>
-assign_puzzle_to_port(sockaddr_in& ip_addr, const std::array<int, 4>& ports) {
+void assign_puzzle_to_port(sockaddr_in& ip_addr,
+                           const std::array<int, 4>& ports) {
 
     std::array<std::string, 4> port_messages = {
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
@@ -200,11 +220,13 @@ assign_puzzle_to_port(sockaddr_in& ip_addr, const std::array<int, 4>& ports) {
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
 
     // Initialize return array
-    std::array<std::string, 4> puzzle_ports;
+
+    std::array<std::pair<std::string, int>, 4> puzzle_ports;
 
     for (int i = 0; i < 4; i++) {
         // TODO: needs changing to actual recieve from function thats yet to be
         // implemented
+
         std::string recieved_msg =
             send_recv(ip_addr, ports[i], "fartss"); // ssss
         if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
@@ -212,33 +234,17 @@ assign_puzzle_to_port(sockaddr_in& ip_addr, const std::array<int, 4>& ports) {
         }
         // If the there isn't a match, the find function will return the null
         // position,
-        if (recieved_msg.find(port_messages[i]) != std::string::npos) {
-            puzzle_ports[i] = recieved_msg;
+        //
+        if (recieved_msg.find(port_messages[0]) != std::string::npos) {
+            solve_puzzle_secret();
+        } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
+            solve_puzzle_evil();
         }
     }
-    return puzzle_ports;
 }
 
 int sigil;
 int group_id;
-
-void solve_puzzle_a() {
-
-    const uint32_t secret_number = 1 << 31 - 1;
-    // // fun fact, this is a prime,
-    // // More formally, this is the eight Mersenne prime,
-    // // Where Mersenne prime is the collection of primes of the form 2^n - 1
-    //
-    // char[43] send_message = "S.E.C.R.E.T.:gislih24,alfaR24,hlynurh24,%s",
-    //          secret_number;
-    //
-    // char[4] message = send_recv(send_message);
-    //
-    // char challenge_number = message[];
-}
-void solve_puzzle_b() {}
-void solve_puzzle_c() {}
-void solve_puzzle_d() {}
 
 } // namespace
 
@@ -279,6 +285,6 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    std::array<std::string, 4> puzzle_ports =
+    std::array<std::pair<std::string, int>, 4> puzzle_ports =
         assign_puzzle_to_port(dest_addr, input_ports);
 }
