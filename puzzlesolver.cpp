@@ -45,7 +45,7 @@ std::string dummy_recieve(int index) {
 
     return dummy_recieved[index];
 }
-// ------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /**
  * @brief Scans the given IPv4 address for open UDP ports in the specified
@@ -155,54 +155,6 @@ std::array<std::string, 4> assign_problems_to_port() {
     return problem_ports;
 }
 
-/**
- * @brief Functions that assigns each port to the given problem
- * @return returns an array which is indexed with each problem,
- * example; the port with problem a is in index 0 of the array,
- * problem b is in index 1, etc.
- */
-std::array<std::string, 4> assign_problems_to_port() {
-
-    std::array<std::string, 4> port_messages = {
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
-        "The dark arts of network programming lead to powers some consider to ",
-        "I am the guardian of the secret spell. The lords of the network do ",
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
-
-    // Initialize return array
-    std::array<std::string, 4> problem_ports;
-
-    for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recieve from function thats yet to be
-        // implemented
-        std::string recieved = dummy_recieve(i);
-
-        // If the there isn't a match, the find function will return the null
-        // position,
-        if (recieved.find(port_messages[i]) != std::string::npos) {
-            problem_ports[i] = recieved;
-        }
-    }
-    return problem_ports;
-}
-
-// TODO: Remove this and implement actual recieved function
-// --------------------------------------
-const std::array<std::string, 4> dummy_recieved = {
-    "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay "
-    "jafdslæfjasldkægjsa ",
-    "The dark arts of network programming lead to powers some consider to "
-    "dkfjasdælkgnadsælg ",
-    "I am the guardian of the secret spell. The lords of the network do "
-    "gahjfdagkjfaklægjdsæl",
-    "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "
-    "lkdsgajgælkasjdglækasjdg"};
-
-std::string dummy_recieve(int index) {
-
-    return dummy_recieved[index];
-}
-// ------------------------------------------------------------------------------------------------
 void solve_puzzle_a() {}
 void solve_puzzle_b() {}
 void solve_puzzle_c() {}
