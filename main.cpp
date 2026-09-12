@@ -233,9 +233,6 @@ void solve_puzzle_a() {
     //
     // char[4] message = send_recv(send_message);
     //
-    // std::uint32_t y;
-    // std::memcpy(&y, buf + n - 4, sizeof y);
-    // group_id = message[0];
     // char challenge_number = message[];
 }
 void solve_puzzle_b() {}
