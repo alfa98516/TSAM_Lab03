@@ -133,7 +133,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -177,7 +177,7 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
             }
             continue;
         } else {
-            return std::string(data_buffer, nbytes_recieved);
+            return data_buffer;
         }
     }
     return "NO_RESPONSE";
@@ -189,7 +189,8 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
  * example; the port with problem a is in index 0 of the array,
  * problem b is in index 1, etc.
  */
-std::array<std::string, 4> assign_puzzle_to_port() {
+std::array<std::string, 4>
+assign_puzzle_to_port(sockaddr_in& ip_addr, const std::array<int, 4>& ports) {
 
     std::array<std::string, 4> port_messages = {
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
@@ -198,20 +199,23 @@ std::array<std::string, 4> assign_puzzle_to_port() {
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
 
     // Initialize return array
-    std::array<std::string, 4> problem_ports;
+    std::array<std::string, 4> puzzle_ports;
 
     for (int i = 0; i < 4; i++) {
         // TODO: needs changing to actual recieve from function thats yet to be
         // implemented
-        std::string recieved = send_recv(i);
-
+        std::string recieved_msg =
+            send_recv(ip_addr, ports[i], "fartss"); // ssss
+        if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
+            continue;
+        }
         // If the there isn't a match, the find function will return the null
         // position,
-        if (recieved.find(port_messages[i]) != std::string::npos) {
-            problem_ports[i] = recieved;
+        if (recieved_msg.find(port_messages[i]) != std::string::npos) {
+            puzzle_ports[i] = recieved_msg;
         }
     }
-    return problem_ports;
+    return puzzle_ports;
 }
 
 int sigil;
@@ -277,5 +281,6 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    std::array<std::string, 4> puzzle_ports = assign_puzzle_to_port();
+    std::array<std::string, 4> puzzle_ports =
+        assign_puzzle_to_port(dest_addr, input_ports);
 }

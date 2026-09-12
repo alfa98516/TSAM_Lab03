@@ -1,7 +1,7 @@
 all: puzzlesolver
 CXXFLAGS = -Wpedantic -std=c++2b
-puzzlesolver: puzzlesolver.cpp
-	g++ ${CXXFLAGS} puzzlesolver.cpp -o $@
+puzzlesolver: main.cpp
+	g++ ${CXXFLAGS} main.cpp -o $@
 
 clean:
 	rm -f puzzlesolver
