@@ -75,11 +75,12 @@ std::string get_port_message(const char* ip_addr, int port_num) {
 
     // Send 5 packets to the port.
     for (int i = 0; i < 5; i++) {
-        if (sendto(sock, payload.c_str(), payload.length() .0,
+        if (sendto(sock, payload.c_str(), payload.length(), 0,
                    (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
             continue;
         }
     }
+    std::string returned_message;
     while (true) {
         ssize_t n_bytes_received =
             recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
@@ -91,18 +92,13 @@ std::string get_port_message(const char* ip_addr, int port_num) {
             perror("recvfrom");
             continue;
         } else {
-            open_ports[ntohs(src_addr.sin_port) - low_port] = true;
-            continue;
+            returned_message = ntohs(src_addr.sin_port);
+            break;
         }
     }
     close(sock);
-    std::cout << "\nOpen ports:\n";
-    for (int i = 0; i < port_count; i++) {
-        if (open_ports[i]) {
-            std::cout << i + low_port << '\n';
-        }
-    }
-    return the_return_messaggeasdlækfj
+    
+    return returned_message;
 }
 
 } // namespace
