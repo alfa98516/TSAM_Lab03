@@ -1,7 +1,5 @@
 #include <arpa/inet.h>
 #include <array>
-#include <asm-generic/socket.h>
-#include <bits/types/struct_timeval.h>
 #include <cerrno>
 #include <cstdint>
 #include <iostream>
@@ -9,6 +7,7 @@
 #include <netinet/ip.h>
 #include <string>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
