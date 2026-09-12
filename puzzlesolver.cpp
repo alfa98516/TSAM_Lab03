@@ -18,13 +18,13 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    const std::string msg_secret_port =
+    const std::string msg_a_secret_port =
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ";
-    const std::string msg_evil_port =
+    const std::string msg_b_evil_port =
         "The dark arts of network programming lead to powers some consider to ";
-    const std::string msg_ipv6_secret =
+    const std::string msg_c_guardian =
         "I am the guardian of the secret spell. The lords of the network do ";
-    const std::string msg_dragon_port_knocking =
+    const std::string msg_d_dragon_port_knocking =
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for ";
 
     //for (int i = 2; i < 6; i++) {
