@@ -52,11 +52,32 @@ int main(int argc, const char* argv[]) {
         "I am the guardian of the secret spell. The lords of the network do ",
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
 
+    std::array<std::string, 4> problem_ports;
+
+    for (int i = 0; i < 4; i++) {
+        // TODO: needs changing to actual recieve from function thats yet to be implemented
+        std::string recieved = recieved_from(i);
+        if (recieved.find(port_messages[i]) != std::string::npos) {
+            problem_ports[i] = recieved;
+        }
+        
+    }
     // for (int i = 2; i < 6; i++) {
     //  TODO: Decide which puzzle the port is for using the received message
     //  and the above constant strings, then call the appropriate puzzle
     //  function.
     //}
+}
+
+const std::array<std::string, 4> dummy_recieved = {
+        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay jafdslæfjasldkægjsa ",
+        "The dark arts of network programming lead to powers some consider to dkfjasdælkgnadsælg ",
+        "I am the guardian of the secret spell. The lords of the network do gahjfdagkjfaklægjdsæl",
+        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for lkdsgajgælkasjdglækasjdg"};
+
+std::string recieved_from(int index) {
+
+    return dummy_recieved[index];
 }
 
 void solve_puzzle_a() {}
