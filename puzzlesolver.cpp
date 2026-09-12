@@ -181,12 +181,14 @@ int secret_sigil;
 
 void solve_puzzle_a() {
 
-    //fun fact, this is a prime :O
-    const int secret_number = 2<<31 - 1; 
+    const int secret_number = 1<<31 - 1; 
+    // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes which satisfy this condition;
     // 2^n - 1
+
 }
+
 void solve_puzzle_b() {}
 void solve_puzzle_c() {}
 void solve_puzzle_d() {}
