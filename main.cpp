@@ -134,7 +134,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+const char* send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
