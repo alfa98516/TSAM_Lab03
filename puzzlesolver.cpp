@@ -133,7 +133,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
+std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -163,8 +163,8 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
 
     for (int i = 0; i < 5; i++) {
         dest_addr.sin_port = htons(port);
-        if (sendto(socket_fd, msg.c_str(), msg.length(), 0,
-                   (struct sockaddr*)&dest_addr, src_addr_len) < 0) {
+        if (sendto(socket_fd, msg, sizeof(msg), 0, (struct sockaddr*)&dest_addr,
+                   src_addr_len) < 0) {
             continue;
         }
     }
@@ -221,11 +221,10 @@ int secret_sigil;
 
 void solve_puzzle_a() {
 
-    const int secret_number = 1<<31 - 1; 
+    const int secret_number = 1 << 31 - 1;
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
-
 }
 
 void solve_puzzle_b() {}
