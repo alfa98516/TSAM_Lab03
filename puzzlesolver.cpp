@@ -95,8 +95,7 @@ std::array<std::string, 4> assign_problems_to_port() {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-std::string send_recv(const sockaddr_in& ip_addr, int port,
-                      const std::string& msg) {
+std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
