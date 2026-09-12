@@ -224,14 +224,19 @@ Here are the rites required to gain access to the secret I guard:
 7. Keep your group ID and sigil safe for future trials, for other ports
    shall require them. But beware: do not write them in stone!
 */
-void solve_puzzle_secret() {
+void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     constexpr uint32_t secret_number = (1u << 31) - 1;
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
-    std::string payload = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24" +
-                          std::to_string(secret_number);
-    std::cout << payload << '\n';
+    char payload[1024] = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24";
+    int offset = 39;
+    payload[offset] = (secret_number >> 24) & 0xFF;
+    payload[offset + 1] = (secret_number >> 16) & 0xFF;
+    payload[offset + 2] = (secret_number >> 8) & 0xFF;
+    payload[offset + 3] = secret_number & 0xFF;
+    std::string response = send_recv(ip_addr, port, payload);
+    std::cout << response << '\n';
 }
 void solve_puzzle_evil() {}
 void solve_puzzle_guardian() {}
@@ -268,7 +273,7 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
         // If the there isn't a match, then find function will return the null
         // position.
         if (recieved_msg.find(port_messages[0]) != std::string::npos) {
-            solve_puzzle_secret();
+            solve_puzzle_secret(ip_addr, ports[i]);
         } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
             solve_puzzle_evil();
         }
