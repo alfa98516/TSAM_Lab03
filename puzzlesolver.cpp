@@ -125,6 +125,68 @@ std::string get_port_message(const char* ip_addr, int port_num) {
 }
 
 /**
+ * @brief Simple send recieve loop, sends 5 packets to an IP address and port,
+ * and then returns the message recieved.
+ *
+ * @param ip_addr: The IP address you want to send to.
+ * @param port: The port you want to send to.
+ * @param msg: The message you want to send to the port.
+ * @returns: A string
+ */
+std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
+    if (port < 0 || port > 65535) {
+        std::cerr << "Port numbers range between 0 and 65535\n";
+        return "ERROR";
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 1;
+
+    struct sockaddr_in dest_addr{};
+    dest_addr.sin_family = AF_INET;
+
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0) {
+        perror("Error Creating socket!");
+        close(socket_fd);
+        return "ERROR";
+    }
+
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                   sizeof(timeout)) < 0) {
+        close(socket_fd);
+        return "ERROR";
+    }
+
+    char data_buffer[2048];
+    socklen_t src_addr_len = sizeof(ip_addr);
+
+    for (int i = 0; i < 5; i++) {
+        dest_addr.sin_port = htons(port);
+        if (sendto(socket_fd, msg.c_str(), msg.length(), 0,
+                   (struct sockaddr*)&dest_addr, src_addr_len) < 0) {
+            continue;
+        }
+    }
+
+    while (true) {
+        ssize_t nbytes_recieved =
+            recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
+                     (struct sockaddr*)&ip_addr, &src_addr_len);
+        if (nbytes_recieved < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::cout << "No response from port " << port << '\n';
+                break;
+            }
+            continue;
+        } else {
+            return std::string(data_buffer, nbytes_recieved);
+        }
+    }
+    return "NO_RESPONSE";
+}
+
+/**
  * @brief Functions that assigns each port to the given problem
  * @return returns an array which is indexed with each problem,
  * example; the port with problem a is in index 0 of the array,
