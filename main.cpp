@@ -139,8 +139,19 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @returns: A string
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+    constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
+        return "ERROR";
+    }
+    if (msg == nullptr) {
+        std::cerr << "Message is null\n";
+        return "ERROR";
+    }
+
+    const std::size_t msg_length = strnlen(msg, max_msg_length);
+    if (msg_length == max_msg_length) {
+        std::cerr << "Message is not null-terminated within the allowed size\n";
         return "ERROR";
     }
 
@@ -166,7 +177,7 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     for (int i = 0; i < 5; i++) {
         ip_addr.sin_port = htons(port);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        if (sendto(socket_fd, msg, strlen(msg), 0, (struct sockaddr*)&ip_addr,
+        if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
                    src_addr_len) < 0) {
             continue;
         }
@@ -192,12 +203,35 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     return "NO_RESPONSE";
 }
 
+/*
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for
+Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID,
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret. May the
+   Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+*/
 void solve_puzzle_secret() {
-
-    const uint32_t secret_number = (1u << 31) - 1;
+    constexpr uint32_t secret_number = (1u << 31) - 1;
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
+    std::string payload = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24" +
+                          std::to_string(secret_number);
+    std::cout << payload << '\n';
 }
 void solve_puzzle_evil() {}
 void solve_puzzle_guardian() {}
@@ -223,17 +257,16 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     std::array<std::pair<std::string, int>, 4> puzzle_ports;
 
     for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recieve from function thats yet to be
-        // implemented
+        // TODO: needs changing to actual recv_from function that's yet to be
+        // implemented.
 
         std::string recieved_msg =
             send_recv(ip_addr, ports[i], "fartss"); // ssss
         if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
             continue;
         }
-        // If the there isn't a match, the find function will return the null
-        // position,
-        //
+        // If the there isn't a match, then find function will return the null
+        // position.
         if (recieved_msg.find(port_messages[0]) != std::string::npos) {
             solve_puzzle_secret();
         } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
@@ -242,8 +275,8 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     }
 }
 
-int sigil;
-int group_id;
+uint32_t sigil;
+uint8_t group_id;
 
 } // namespace
 
@@ -284,6 +317,6 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    std::array<std::pair<std::string, int>, 4> puzzle_ports =
-        assign_puzzle_to_port(dest_addr, input_ports);
+    // std::array<std::pair<std::string, int>, 4> puzzle_ports =
+    assign_puzzle_to_port(dest_addr, input_ports);
 }
