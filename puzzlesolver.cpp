@@ -1,3 +1,4 @@
+#include <array>
 #include <iostream>
 #include <string>
 
@@ -36,14 +37,20 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    const std::string msg_a_secret_port =
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ";
-    const std::string msg_b_evil_port =
-        "The dark arts of network programming lead to powers some consider to ";
-    const std::string msg_c_guardian =
-        "I am the guardian of the secret spell. The lords of the network do ";
-    const std::string msg_d_dragon_port_knocking =
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for ";
+    const char* ip_addr = argv[1];
+
+    std::array<int, 4> input_ports;
+    std::array<int, 4> input_ports;
+
+    for (int i = 0; i < 4; i++) {
+        int curr_port = parse_port(argv[i], 2);
+    }
+
+    std::array<std::string, 4> port_messages = {
+        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
+        "The dark arts of network programming lead to powers some consider to ",
+        "I am the guardian of the secret spell. The lords of the network do ",
+        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
 
     // for (int i = 2; i < 6; i++) {
     //  TODO: Decide which puzzle the port is for using the received message
