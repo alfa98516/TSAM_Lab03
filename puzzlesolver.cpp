@@ -87,13 +87,15 @@ std::array<std::string, 4> assign_problems_to_port() {
 }
 
 /**
- * @brief
+ * @brief Simple send recieve loop, sends 5 packets to an IP address and port,
+ * and then returns the message recieved.
  *
- * @param[[TODO:direction]] ip_addr [TODO:description]
- * @param[[TODO:direction]] port [TODO:description]
- * @param[[TODO:direction]] msg [TODO:description]
+ * @param ip_addr: The IP address you want to send to.
+ * @param port: The port you want to send to.
+ * @param msg: The message you want to send to the port.
+ * @returns: A string
  */
-std::string send_recv(const std::string& ip_addr, int port,
+std::string send_recv(const sockaddr_in& ip_addr, int port,
                       const std::string& msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
@@ -105,16 +107,6 @@ std::string send_recv(const std::string& ip_addr, int port,
 
     struct sockaddr_in dest_addr{};
     dest_addr.sin_family = AF_INET;
-
-    int inet_pton_result =
-        inet_pton(AF_INET, ip_addr.c_str(), &dest_addr.sin_addr);
-    if (inet_pton_result == 0) {
-    }
-
-    if (inet_pton_result < 0) {
-        perror("inet_pton");
-        return "ERROR";
-    }
 
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
@@ -130,8 +122,7 @@ std::string send_recv(const std::string& ip_addr, int port,
     }
 
     char data_buffer[2048];
-    struct sockaddr_in src_addr{};
-    socklen_t src_addr_len = sizeof(src_addr);
+    socklen_t src_addr_len = sizeof(ip_addr);
 
     for (int i = 0; i < 5; i++) {
         dest_addr.sin_port = htons(port);
@@ -144,7 +135,7 @@ std::string send_recv(const std::string& ip_addr, int port,
     while (true) {
         ssize_t nbytes_recieved =
             recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
-                     (struct sockaddr*)&src_addr, &src_addr_len);
+                     (struct sockaddr*)&ip_addr, &src_addr_len);
         if (nbytes_recieved < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 std::cout << "No response from port " << port << '\n';
@@ -155,6 +146,7 @@ std::string send_recv(const std::string& ip_addr, int port,
             return std::string(data_buffer, nbytes_recieved);
         }
     }
+    return "NO_RESPONSE";
 }
 
 // TODO: Remove this and implement actual recieved function
