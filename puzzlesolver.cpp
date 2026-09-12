@@ -40,7 +40,6 @@ int main(int argc, const char* argv[]) {
     const char* ip_addr = argv[1];
 
     std::array<int, 4> input_ports;
-    std::array<int, 4> input_ports;
 
     for (int i = 0; i < 4; i++) {
         int curr_port = parse_port(argv[i], 2);
@@ -55,12 +54,12 @@ int main(int argc, const char* argv[]) {
     std::array<std::string, 4> problem_ports;
 
     for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recieve from function thats yet to be implemented
+        // TODO: needs changing to actual recieve from function thats yet to be
+        // implemented
         std::string recieved = dummy_recieve(i);
         if (recieved.find(port_messages[i]) != std::string::npos) {
             problem_ports[i] = recieved;
         }
-        
     }
     // for (int i = 2; i < 6; i++) {
     //  TODO: Decide which puzzle the port is for using the received message
@@ -69,16 +68,19 @@ int main(int argc, const char* argv[]) {
     //}
 }
 
-
-// TODO: Remove this and implement actual recieved function --------------------------------------
+// TODO: Remove this and implement actual recieved function
+// -----------------------------------------------------------------------------------------------
 const std::array<std::string, 4> dummy_recieved = {
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay jafdslæfjasldkægjsa ",
-        "The dark arts of network programming lead to powers some consider to dkfjasdælkgnadsælg ",
-        "I am the guardian of the secret spell. The lords of the network do gahjfdagkjfaklægjdsæl",
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for lkdsgajgælkasjdglækasjdg"};
+    "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay "
+    "jafdslæfjasldkægjsa ",
+    "The dark arts of network programming lead to powers some consider to "
+    "dkfjasdælkgnadsælg ",
+    "I am the guardian of the secret spell. The lords of the network do "
+    "gahjfdagkjfaklægjdsæl",
+    "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "
+    "lkdsgajgælkasjdglækasjdg"};
 
 std::string dummy_recieve(int index) {
-
     return dummy_recieved[index];
 }
 // ------------------------------------------------------------------------------------------------
