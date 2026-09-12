@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <cerrno>
+#include <cstdint>
 #include <iostream>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -132,7 +133,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
+std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -140,9 +141,6 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
 
     timeval timeout{};
     timeout.tv_sec = 1;
-
-    struct sockaddr_in dest_addr{};
-    dest_addr.sin_family = AF_INET;
 
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
@@ -161,9 +159,9 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const std::string& msg) {
     socklen_t src_addr_len = sizeof(ip_addr);
 
     for (int i = 0; i < 5; i++) {
-        dest_addr.sin_port = htons(port);
-        if (sendto(socket_fd, msg.c_str(), msg.length(), 0,
-                   (struct sockaddr*)&dest_addr, src_addr_len) < 0) {
+        ip_addr.sin_port = htons(port);
+        if (sendto(socket_fd, msg, sizeof(msg), 0, (struct sockaddr*)&ip_addr,
+                   src_addr_len) < 0) {
             continue;
         }
     }
@@ -216,7 +214,26 @@ std::array<std::string, 4> assign_problems_to_port() {
     return problem_ports;
 }
 
-void solve_puzzle_a() {}
+int sigil;
+int group_id;
+
+void solve_puzzle_a() {
+
+    const int secret_number = 1 << 31 - 1;
+    // fun fact, this is a prime,
+    // More formally, this is the eight Mersenne prime,
+    // Where Mersenne prime is the collection of primes of the form 2^n - 1
+
+    char[43] send_message = "S.E.C.R.E.T.:gislih24,alfaR24,hlynurh24,%s",
+             secret_number;
+
+    char[4] message = send_recv(send_message);
+
+    std::uint32_t y;
+    std::memcpy(&y, buf + n - 4, sizeof y);
+    group_id = message[0];
+    char challenge_number = message[];
+}
 void solve_puzzle_b() {}
 void solve_puzzle_c() {}
 void solve_puzzle_d() {}
@@ -241,10 +258,25 @@ int main(int argc, const char* argv[]) {
     const char* ip_addr = argv[1];
 
     std::array<int, 4> input_ports;
+    // std::array<int, 4> input_ports;
+    //
+    // for (int i = 0; i < 4; i++) {
+    //     int curr_port = parse_port(argv[i], 2);
+    // }
 
-    for (int i = 0; i < 4; i++) {
-        int curr_port = parse_port(argv[i], 2);
+    struct sockaddr_in dest_addr{};
+    dest_addr.sin_family = AF_INET;
+
+    int inet_pton_result = inet_pton(AF_INET, ip_addr, &dest_addr.sin_addr);
+    if (inet_pton_result == 0) {
+        std::cerr << "Invalid IPv4 address: " << ip_addr << '\n';
+        return 1;
     }
-
+    if (inet_pton_result < 0) {
+        perror("inet_pton");
+        return 1;
+    }
     std::array<std::string, 4> problem_ports = assign_problems_to_port();
+    std::string msg = send_recv(dest_addr, 4033, "hi");
+    std::cout << msg << '\n';
 }
