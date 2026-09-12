@@ -224,17 +224,16 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     std::array<std::pair<std::string, int>, 4> puzzle_ports;
 
     for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recieve from function thats yet to be
-        // implemented
+        // TODO: needs changing to actual recv_from function that's yet to be
+        // implemented.
 
         std::string recieved_msg =
             send_recv(ip_addr, ports[i], "fartss"); // ssss
         if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
             continue;
         }
-        // If the there isn't a match, the find function will return the null
-        // position,
-        //
+        // If the there isn't a match, then find function will return the null
+        // position.
         if (recieved_msg.find(port_messages[0]) != std::string::npos) {
             solve_puzzle_secret();
         } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
@@ -243,8 +242,8 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     }
 }
 
-int sigil;
-int group_id;
+uint32_t sigil;
+uint8_t group_id;
 
 } // namespace
 
@@ -285,6 +284,6 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    std::array<std::pair<std::string, int>, 4> puzzle_ports =
-        assign_puzzle_to_port(dest_addr, input_ports);
+    // std::array<std::pair<std::string, int>, 4> puzzle_ports =
+    assign_puzzle_to_port(dest_addr, input_ports);
 }
