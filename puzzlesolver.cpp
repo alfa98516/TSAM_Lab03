@@ -155,34 +155,6 @@ std::array<std::string, 4> assign_problems_to_port() {
     return problem_ports;
 }
 
-} // namespace
-
-/**
- * @brief Main function that scans a given IPv4 address for open UDP ports in
- * the specified range.
- * @param argc Number of args, must be 4.
- * @param argv Argument vector, where: argv[1] is the IPv4 address, argv[2] is
- * the low port, and argv[3] is the high port.
- * @return 0 on success, 1 on failure.
- */
-int main(int argc, const char* argv[]) {
-    if (argc != 6) {
-        std::cerr << "Usage:" << argv[0]
-                  << " <IPv4 address> <port 1> <port 2> <port 3> <port 4>\n";
-        return 1;
-    }
-
-    const char* ip_addr = argv[1];
-
-    std::array<int, 4> input_ports;
-    std::array<int, 4> input_ports;
-
-    for (int i = 0; i < 4; i++) {
-        int curr_port = parse_port(argv[i], 2);
-    }
-
-    std::array<std::string, 4> problem_ports = assign_problems_to_port();
-}
 /**
  * @brief Functions that assigns each port to the given problem
  * @return returns an array which is indexed with each problem,
@@ -235,3 +207,32 @@ void solve_puzzle_a() {}
 void solve_puzzle_b() {}
 void solve_puzzle_c() {}
 void solve_puzzle_d() {}
+
+} // namespace
+
+/**
+ * @brief Main function that scans a given IPv4 address for open UDP ports in
+ * the specified range.
+ * @param argc Number of args, must be 4.
+ * @param argv Argument vector, where: argv[1] is the IPv4 address, argv[2] is
+ * the low port, and argv[3] is the high port.
+ * @return 0 on success, 1 on failure.
+ */
+int main(int argc, const char* argv[]) {
+    if (argc != 6) {
+        std::cerr << "Usage:" << argv[0]
+                  << " <IPv4 address> <port 1> <port 2> <port 3> <port 4>\n";
+        return 1;
+    }
+
+    const char* ip_addr = argv[1];
+
+    std::array<int, 4> input_ports;
+    std::array<int, 4> input_ports;
+
+    for (int i = 0; i < 4; i++) {
+        int curr_port = parse_port(argv[i], 2);
+    }
+
+    std::array<std::string, 4> problem_ports = assign_problems_to_port();
+}
