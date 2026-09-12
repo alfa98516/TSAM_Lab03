@@ -1,7 +1,25 @@
 #include <iostream>
 #include <string>
 
-namespace {} // namespace
+namespace {
+/**
+ * @brief Parses a command line argument as an integer port number.
+ * @param argument The command line argument to parse.
+ * @param argument_number The index of the argument in argv[].
+ * @return The parsed port number, or -1 if the argument is invalid.
+ */
+int parse_port(const char* argument, int argument_number) {
+    try {
+        return std::stoi(argument);
+    } catch (const std::invalid_argument&) {
+        std::cerr << "Argument " << argument_number << " must be an integer\n";
+    } catch (const std::out_of_range&) {
+        std::cerr << "Argument " << argument_number << " is too large\n";
+    }
+    return -1;
+}
+
+} // namespace
 
 /**
  * @brief Main function that scans a given IPv4 address for open UDP ports in
