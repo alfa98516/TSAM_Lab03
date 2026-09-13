@@ -15,9 +15,11 @@
 #include <thread>
 #include <unistd.h>
 #include <utility>
+#include <vector>
 
 uint32_t sigil;
 uint8_t group_id;
+std::vector<int> secret_ports;
 
 namespace {
 
@@ -142,7 +144,8 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @param msg: The message you want to send to the port.
  * @returns: A string
  */
-std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
+std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
+                      size_t msg_length, bool evil) {
     constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
@@ -150,12 +153,6 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg) {
     }
     if (msg == nullptr) {
         std::cerr << "Message is null\n";
-        return "ERROR";
-    }
-
-    const std::size_t msg_length = strnlen(msg, max_msg_length);
-    if (msg_length == max_msg_length) {
-        std::cerr << "Message is not null-terminated within the allowed size\n";
         return "ERROR";
     }
 
@@ -240,31 +237,39 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     payload[offset + 2] = (secret_number >> 8) & 0xFF;
     payload[offset + 3] = secret_number & 0xFF;
 
-    std::string response = send_recv(ip_addr, port, payload);
+    std::string response = send_recv(ip_addr, port, payload, 43, false);
     const char* cstr = response.c_str();
     group_id = cstr[0];
-    std::cout << response.length() << '\n';
-    std::cout << (int)group_id << '\n';
     char challenge_chr[4];
-    uint32_t challenge_int;
     challenge_chr[0] = cstr[1];
     challenge_chr[1] = cstr[2];
     challenge_chr[2] = cstr[3];
     challenge_chr[3] = cstr[4];
-    memcpy(&challenge_int, challenge_chr, 4);
-    std::cout << challenge_int << '\n';
+
+    uint32_t challenge_int = static_cast<uint8_t>(cstr[1]) << 24 |
+                             static_cast<uint8_t>(cstr[2]) << 16 |
+                             static_cast<uint8_t>(cstr[3]) << 8 |
+                             static_cast<uint8_t>(cstr[4]);
+
     sigil = challenge_int ^ secret_number;
     const char* sigil_chr = reinterpret_cast<const char*>(&sigil);
+
     char payload2[1024];
 
     payload2[0] = group_id;
-    payload2[1] = sigil_chr[0];
-    payload2[2] = sigil_chr[1];
-    payload2[3] = sigil_chr[2];
-    payload2[4] = sigil_chr[3];
-    payload2[5] = '\0';
-    std::string msg = send_recv(ip_addr, port, payload);
-    std::cout << msg << '\n';
+    payload2[1] = (sigil >> 24) & 0xFF;
+    payload2[2] = (sigil >> 16) & 0xFF;
+    payload2[3] = (sigil >> 8) & 0xFF;
+    payload2[4] = sigil & 0xFF;
+    std::string msg = send_recv(ip_addr, port, payload2, 5, false);
+    const char* msgcstr = msg.c_str();
+    char secret_port[5];
+    secret_port[0] = msgcstr[69];
+    secret_port[1] = msgcstr[70];
+    secret_port[2] = msgcstr[71];
+    secret_port[3] = msgcstr[72];
+    secret_port[4] = '\0';
+    std::cout << secret_port << '\n';
 }
 
 void solve_puzzle_evil() {}
@@ -295,7 +300,7 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
         // implemented.
 
         std::string recieved_msg =
-            send_recv(ip_addr, ports[i], "fartss"); // ssss
+            send_recv(ip_addr, ports[i], "fartss", 6, false); // ssss
         if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
             continue;
         }
