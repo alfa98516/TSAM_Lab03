@@ -233,19 +233,20 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
-    char payload[1024] = "S.E.C.E.T.:alfar24,gislih24,hlynurh24";
+    char payload[1024] = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24";
     int offset = 39;
     payload[offset] = (secret_number >> 24) & 0xFF;
     payload[offset + 1] = (secret_number >> 16) & 0xFF;
     payload[offset + 2] = (secret_number >> 8) & 0xFF;
     payload[offset + 3] = secret_number & 0xFF;
+
     std::string response = send_recv(ip_addr, port, payload);
     const char* cstr = response.c_str();
     group_id = cstr[0];
     std::cout << response.length() << '\n';
     std::cout << (int)group_id << '\n';
     char challenge_chr[4];
-    int challenge_int;
+    uint32_t challenge_int;
     challenge_chr[0] = cstr[1];
     challenge_chr[1] = cstr[2];
     challenge_chr[2] = cstr[3];
@@ -254,12 +255,14 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     std::cout << challenge_int << '\n';
     sigil = challenge_int ^ secret_number;
     const char* sigil_chr = reinterpret_cast<const char*>(&sigil);
-    payload[0] = group_id;
-    payload[1] = sigil_chr[0];
-    payload[2] = sigil_chr[1];
-    payload[3] = sigil_chr[2];
-    payload[4] = sigil_chr[3];
-    payload[5] = '\0';
+    char payload2[1024];
+
+    payload2[0] = group_id;
+    payload2[1] = sigil_chr[0];
+    payload2[2] = sigil_chr[1];
+    payload2[3] = sigil_chr[2];
+    payload2[4] = sigil_chr[3];
+    payload2[5] = '\0';
     std::string msg = send_recv(ip_addr, port, payload);
     std::cout << msg << '\n';
 }
