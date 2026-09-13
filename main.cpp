@@ -4,10 +4,13 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <ratio>
 #include <string>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -145,7 +148,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  * @returns: A string
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
-                      size_t msg_length, bool evil) {
+                      size_t msg_length) {
     constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
@@ -237,7 +240,7 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     payload[offset + 2] = (secret_number >> 8) & 0xFF;
     payload[offset + 3] = secret_number & 0xFF;
 
-    std::string response = send_recv(ip_addr, port, payload, 43, false);
+    std::string response = send_recv(ip_addr, port, payload, 43);
     const char* cstr = response.c_str();
     group_id = cstr[0];
     char challenge_chr[4];
@@ -261,7 +264,7 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     payload2[2] = (sigil >> 16) & 0xFF;
     payload2[3] = (sigil >> 8) & 0xFF;
     payload2[4] = sigil & 0xFF;
-    std::string msg = send_recv(ip_addr, port, payload2, 5, false);
+    std::string msg = send_recv(ip_addr, port, payload2, 5);
     const char* msgcstr = msg.c_str();
     char secret_port[5];
     secret_port[0] = msgcstr[69];
@@ -269,10 +272,161 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     secret_port[2] = msgcstr[71];
     secret_port[3] = msgcstr[72];
     secret_port[4] = '\0';
-    std::cout << secret_port << '\n';
+    secret_ports.push_back(std::stoi(secret_port));
 }
 
-void solve_puzzle_evil() {}
+void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
+
+    // get ip address of current machine
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("creating dummy socket did not work\n");
+        return;
+    }
+
+    struct sockaddr_in serv_addr;
+    std::memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port =
+        htons(53); // i love dns 😀 it allways works great for me
+    int inet_pton_result = inet_pton(AF_INET, "8.8.8.8", &serv_addr.sin_addr);
+
+    if (inet_pton_result == 0) {
+        std::cerr << "Invalid IPv4 address: " << "8.8.8.8"
+                  << '\n'; // this aint gonna happen
+        close(sock);
+        return;
+    }
+    if (inet_pton_result < 0) {
+        perror("inet_pton");
+        close(sock);
+        return;
+    }
+
+    if (connect(sock, (const struct sockaddr*)&serv_addr, sizeof(serv_addr)) <
+        0) {
+        close(sock);
+        perror("Connecting failed\n");
+    }
+
+    struct sockaddr_in local_addr;
+    socklen_t addr_len = sizeof(local_addr);
+    if (getsockname(sock, (struct sockaddr*)&local_addr, &addr_len) < 0) {
+        perror("Error getting socket name\n");
+    }
+
+    // creating socket for sending/reciving
+    const std::string payload =
+        "THAT'S IT IM FUCKING EVIL NOW, LIGHTNING SOUND EFFECT *BOOOOOM*";
+    int socket_fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+    if (socket_fd < 0) {
+        perror("Error Creating EVIL socket!");
+        close(socket_fd);
+        return;
+    }
+    int one = 1;
+    if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) < 0) {
+        perror("setsockopt IP_HDRINCL");
+        close(socket_fd);
+        return;
+    }
+    timeval timeout{};
+    timeout.tv_sec = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                   sizeof(timeout)) < 0) {
+        close(socket_fd);
+        perror("setting timeout went wrong\n");
+        return;
+    }
+
+    int total_length =
+        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(payload.c_str());
+
+    char* packet = new char[total_length];
+    memset(packet, 0, total_length);
+
+    int source_port = 5043; // perhaps bad practice to use a literal here,
+    // should really be looking for unused ports on the machine.
+
+    char* data = packet + sizeof(iphdr) + sizeof(udphdr);
+    struct iphdr* ip = (struct iphdr*)packet;
+    struct udphdr* udp = (struct udphdr*)(packet + sizeof(struct iphdr));
+    memcpy(data, payload.c_str(), strlen(payload.c_str()));
+    ip->version = 4;
+    ip->ihl = 5;
+    ip->tos = 0;
+    ip->id = htons(4564);
+    ip->frag_off = htons(0x8000); // flipping the evil bit 😈 MUUHAHAHHAHAHAH
+    ip->ttl = 255;                // average ttl of a packet in a router.
+    ip->protocol = IPPROTO_UDP;
+    ip->tot_len = htons(total_length);
+    ip->saddr = local_addr.sin_addr.s_addr;
+    ip->daddr = ip_addr.sin_addr.s_addr;
+    uint32_t sum = 0;
+    int n = sizeof(iphdr);
+    uint16_t* addr = (uint16_t*)ip;
+
+    while (n > 1) {
+        sum += ntohs(*addr++);
+        n -= 2;
+    }
+    if (n > 0) {
+        sum += *(uint8_t*)addr;
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    ip->check = htons(~sum);
+
+    udp->check = 0; // no checksum needed for udp
+    udp->source = htons(source_port);
+    udp->dest = htons(port);
+    udp->len = htons(sizeof(struct udphdr) + strlen(payload.c_str()));
+    for (int i = 0; i < 5; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (sendto(socket_fd, packet, total_length, 0,
+                   (struct sockaddr*)&ip_addr, sizeof(ip_addr)) < 0) {
+
+            std::cerr << "Evil port is NOT happy\n";
+        }
+    }
+    ip_addr.sin_port = htons(source_port);
+    char evil_response[2048];
+
+    socklen_t src_addr_len = sizeof(ip_addr);
+    while (true) {
+        ssize_t nbytes_recieved =
+            recvfrom(socket_fd, evil_response, sizeof(evil_response), 0,
+                     (struct sockaddr*)&ip_addr, &src_addr_len);
+        if (nbytes_recieved < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::cout << "No response from port " << port << '\n';
+                break;
+            }
+            continue;
+        } else {
+            if (nbytes_recieved >= 2048) {
+                std::cout << "TOO many bytes, evil port is so evil :(\n";
+                break;
+            }
+            std::string evil_string =
+                std::string(evil_response, nbytes_recieved);
+            if (evil_string.find(
+                    "The dark arts of network programming lead to powers "
+                    "some consider to be...unnatural. I am an evil port, I "
+                    "shall speak only with evil entities! "
+                    "(https://en.wikipedia.org/wiki/Evil_bit)") ==
+                std::string::npos) {
+                std::cout << evil_string << '\n';
+                break;
+            }
+        }
+    }
+    close(socket_fd);
+    delete[] packet;
+}
 void solve_puzzle_guardian() {}
 void solve_puzzle_dragon() {}
 
@@ -286,30 +440,33 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
                            const std::array<int, 4>& ports) {
 
     std::array<std::string, 4> port_messages = {
-        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay ",
-        "The dark arts of network programming lead to powers some consider to ",
-        "I am the guardian of the secret spell. The lords of the network do ",
-        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "};
+        "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher "
+        "Relay ",
+        "The dark arts of network programming lead to powers some consider "
+        "to ",
+        "I am the guardian of the secret spell. The lords of the network "
+        "do ",
+        "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus "
+        "for "};
 
     // Initialize return array
 
     std::array<std::pair<std::string, int>, 4> puzzle_ports;
 
     for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recv_from function that's yet to be
-        // implemented.
+        // TODO: needs changing to actual recv_from function that's yet to
+        // be implemented.
 
-        std::string recieved_msg =
-            send_recv(ip_addr, ports[i], "fartss", 6, false); // ssss
+        std::string recieved_msg = send_recv(ip_addr, ports[i], "payload", 7);
         if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
             continue;
         }
-        // If the there isn't a match, then find function will return the null
-        // position.
+        // If the there isn't a match, then find function will return the
+        // null position.
         if (recieved_msg.find(port_messages[0]) != std::string::npos) {
             solve_puzzle_secret(ip_addr, ports[i]);
         } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
-            solve_puzzle_evil();
+            solve_puzzle_evil(ip_addr, ports[i]);
         }
     }
 }
