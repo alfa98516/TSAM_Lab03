@@ -1,0 +1,13 @@
+
+{
+   mesa_llvm_leak
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libLLVM*.so*
+}
+{
+   mesa_driver_leak
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/dri/*.so
+}
