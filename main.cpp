@@ -228,7 +228,7 @@ Here are the rites required to gain access to the secret I guard:
 7. Keep your group ID and sigil safe for future trials, for other ports
    shall require them. But beware: do not write them in stone!
 */
-void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
+void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     constexpr uint32_t secret_number = (1u << 31) - 1;
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
@@ -275,7 +275,7 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, int port) {
     secret_ports.push_back(std::stoi(secret_port));
 }
 
-void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
+void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
 
     // get ip address of current machine
 
@@ -317,6 +317,15 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
     }
 
     // creating socket for sending/reciving
+    char chrPayload[6];
+
+    chrPayload[0] = group_id;
+    chrPayload[1] = (sigil >> 24) & 0xFF;
+    chrPayload[2] = (sigil >> 16) & 0xFF;
+    chrPayload[3] = (sigil >> 8) & 0xFF;
+    chrPayload[4] = sigil & 0xFF;
+    chrPayload[5] = '\0';
+
     const std::string payload =
         "THAT'S IT IM FUCKING EVIL NOW, LIGHTNING SOUND EFFECT *BOOOOOM*";
     int socket_fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
@@ -341,7 +350,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
     }
 
     int total_length =
-        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(payload.c_str());
+        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(chrPayload);
 
     char* packet = new char[total_length];
     memset(packet, 0, total_length);
@@ -352,7 +361,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
     char* data = packet + sizeof(iphdr) + sizeof(udphdr);
     struct iphdr* ip = (struct iphdr*)packet;
     struct udphdr* udp = (struct udphdr*)(packet + sizeof(struct iphdr));
-    memcpy(data, payload.c_str(), strlen(payload.c_str()));
+    memcpy(data, chrPayload, strlen(chrPayload));
     ip->version = 4;
     ip->ihl = 5;
     ip->tos = 0;
@@ -383,7 +392,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
     udp->check = 0; // no checksum needed for udp
     udp->source = htons(source_port);
     udp->dest = htons(port);
-    udp->len = htons(sizeof(struct udphdr) + strlen(payload.c_str()));
+    udp->len = htons(sizeof(struct udphdr) + strlen(chrPayload));
     for (int i = 0; i < 5; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (sendto(socket_fd, packet, total_length, 0,
@@ -419,7 +428,9 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
                     "shall speak only with evil entities! "
                     "(https://en.wikipedia.org/wiki/Evil_bit)") ==
                 std::string::npos) {
-                std::cout << evil_string << '\n';
+                int n = evil_string.length();
+                std::string evil_secret_port = evil_string.substr(n - 4, n);
+                secret_ports.push_back(std::stoi(evil_secret_port));
                 break;
             }
         }
@@ -427,7 +438,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, int port) {
     close(socket_fd);
     delete[] packet;
 }
-void solve_puzzle_guardian() {}
+void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {}
 void solve_puzzle_dragon() {}
 
 /**
@@ -438,6 +449,8 @@ void solve_puzzle_dragon() {}
  */
 void assign_puzzle_to_port(sockaddr_in& ip_addr,
                            const std::array<int, 4>& ports) {
+    bool secret_done = false;
+    bool evil_done = false;
 
     std::array<std::string, 4> port_messages = {
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher "
@@ -452,22 +465,37 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     // Initialize return array
 
     std::array<std::pair<std::string, int>, 4> puzzle_ports;
+    while (1) {
+        for (int i = 0; i < 4; i++) {
+            // TODO: needs changing to actual recv_from function that's yet to
+            // be implemented.
 
-    for (int i = 0; i < 4; i++) {
-        // TODO: needs changing to actual recv_from function that's yet to
-        // be implemented.
+            std::string recieved_msg =
+                send_recv(ip_addr, ports[i], "payload", 7);
+            if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
+                continue;
+            }
+            // If the there isn't a match, then find function will return the
+            // null position.
+            if (recieved_msg.find(port_messages[0]) != std::string::npos &&
+                !secret_done) {
+                solve_puzzle_secret(ip_addr, ports[i]);
+                secret_done = true; // need to finish secret before evil port is
+                                    // done, we need the sigil.
+            } else if ((recieved_msg.find(port_messages[1]) !=
+                        std::string::npos) &&
+                       secret_done && !evil_done) {
 
-        std::string recieved_msg = send_recv(ip_addr, ports[i], "payload", 7);
-        if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
-            continue;
+                solve_puzzle_evil(ip_addr, ports[i]);
+                evil_done = true;
+            } else if ((recieved_msg.find(port_messages[2]) !=
+                        std::string::npos) &&
+                       (secret_done && evil_done)) {
+                solve_puzzle_guardian(ip_addr, ports[i]);
+            }
         }
-        // If the there isn't a match, then find function will return the
-        // null position.
-        if (recieved_msg.find(port_messages[0]) != std::string::npos) {
-            solve_puzzle_secret(ip_addr, ports[i]);
-        } else if (recieved_msg.find(port_messages[1]) != std::string::npos) {
-            solve_puzzle_evil(ip_addr, ports[i]);
-        }
+        if (evil_done && secret_done) // yuck !
+            break;
     }
 }
 
