@@ -431,6 +431,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
                 int n = evil_string.length();
                 std::string evil_secret_port = evil_string.substr(n - 4, n);
                 secret_ports.push_back(std::stoi(evil_secret_port));
+                std::cout << evil_secret_port << '\n';
                 break;
             }
         }

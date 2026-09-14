@@ -1,0 +1,4 @@
+#!/bin/bash
+
+ports=$(./scanner 130.208.246.98 4000 4100)
+./puzzlesolver 130.208.246.98 $ports
