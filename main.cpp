@@ -353,6 +353,15 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     close(raw_socket);
     delete[] packet;
 }
+
+/*e�{l�;�.
+�g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords
+of the network do not want us to use these newer scrolls (IPv6), but I found a
+way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with
+your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address
+them accordingly.*/
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {}
 void solve_puzzle_dragon() {}
 
