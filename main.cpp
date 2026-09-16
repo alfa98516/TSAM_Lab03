@@ -42,23 +42,6 @@ int parse_port(const char* argument, int argument_number) {
     }
     return -1;
 }
-// TODO: Remove this and implement actual recieved function
-// --------------------------------------
-const std::array<std::string, 4> dummy_recieved = {
-    "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay "
-    "jafdslæfjasldkægjsa ",
-    "The dark arts of network programming lead to powers some consider to "
-    "dkfjasdælkgnadsælg ",
-    "I am the guardian of the secret spell. The lords of the network do "
-    "gahjfdagkjfaklægjdsæl",
-    "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for "
-    "lkdsgajgælkasjdglækasjdg"};
-
-std::string dummy_recieve(int index) {
-
-    return dummy_recieved[index];
-}
-// ----------------------------------------------------------------------------
 
 /**
  * @brief Scans the given IPv4 address for open UDP ports in the specified
@@ -150,8 +133,6 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
                       size_t msg_length) {
-    // TODO: max_msg_length seems to be unused?
-    constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -256,8 +237,6 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
                              static_cast<uint8_t>(cstr[4]);
 
     sigil = challenge_int ^ secret_number;
-    // TODO: sigil_chr seems to be unused?
-    auto sigil_chr = reinterpret_cast<const char*>(&sigil);
 
     char payload_2[1024];
 
@@ -328,8 +307,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     auth_payload[4] = sigil & 0xFF;
     auth_payload[5] = '\0';
 
-    const std::string payload =
-        "THAT'S IT IM FUCKING EVIL NOW, LIGHTNING SOUND EFFECT *BOOOOOM*";
     int raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (raw_socket < 0) {
         perror("Error Creating EVIL socket!");
@@ -484,8 +461,6 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     std::array<std::pair<std::string, int>, 4> puzzle_ports;
     while (1) {
         for (int i = 0; i < 4; i++) {
-            // TODO: needs changing to actual recv_from function that's yet to
-            // be implemented.
 
             std::string recieved_msg =
                 send_recv(ip_addr, ports[i], "payload", 7);
