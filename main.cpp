@@ -280,7 +280,7 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
 
 void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
 
-    // get ip address of current machine
+    // Get IP address of current machine
 
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
@@ -292,12 +292,12 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
     std::memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port =
-        htons(53); // i love dns 😀 it allways works great for me
+        htons(53); // I love DNS 😀 it allways works great for me
     int inet_pton_result = inet_pton(AF_INET, "8.8.8.8", &serv_addr.sin_addr);
 
     if (inet_pton_result == 0) {
         std::cerr << "Invalid IPv4 address: " << "8.8.8.8"
-                  << '\n'; // this aint gonna happen
+                  << '\n'; // This ain't gonna happen
         close(sock);
         return;
     }
@@ -319,7 +319,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
         perror("Error getting socket name\n");
     }
 
-    // creating socket for sending/reciving
+    // Creating socket for sending/reciving
     char chr_payload[6];
 
     chr_payload[0] = group_id;
@@ -352,53 +352,55 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
         return;
     }
 
-    int total_length =
+    int packet_total_length =
         sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(chr_payload);
 
-    auto packet = new char[total_length];
-    memset(packet, 0, total_length);
+    auto packet = new char[packet_total_length];
+    memset(packet, 0, packet_total_length);
 
-    int source_port = 5043; // perhaps bad practice to use a literal here,
+    int source_port = 5043; // Perhaps bad practice to use a literal here,
     // should really be looking for unused ports on the machine.
 
     char* data = packet + sizeof(iphdr) + sizeof(udphdr);
-    auto ip = (struct iphdr*)packet;
-    auto udp = (struct udphdr*)(packet + sizeof(struct iphdr));
+    auto ip_header = (struct iphdr*)packet;
+    auto udp_header = (struct udphdr*)(packet + sizeof(struct iphdr));
     memcpy(data, chr_payload, strlen(chr_payload));
-    ip->version = 4;
-    ip->ihl = 5;
-    ip->tos = 0;
-    ip->id = htons(4564);
-    ip->frag_off = htons(0x8000); // flipping the evil bit 😈 MUUHAHAHHAHAHAH
-    ip->ttl = 255;                // average ttl of a packet in a router.
-    ip->protocol = IPPROTO_UDP;
-    ip->tot_len = htons(total_length);
-    ip->saddr = local_addr.sin_addr.s_addr;
-    ip->daddr = ip_addr.sin_addr.s_addr;
-    uint32_t sum = 0;
-    int n = sizeof(iphdr);
-    auto addr = (uint16_t*)ip;
+    ip_header->version = 4;
+    ip_header->ihl = 5;
+    ip_header->tos = 0;
+    ip_header->id = htons(4564);
+    ip_header->frag_off =
+        htons(0x8000);    // Flipping the evil bit 😈 MUUHAHAHHAHAHAH!
+    ip_header->ttl = 255; // Average TTL of a packet in a router.
+    ip_header->protocol = IPPROTO_UDP;
+    ip_header->tot_len = htons(packet_total_length);
+    ip_header->saddr = local_addr.sin_addr.s_addr;
+    ip_header->daddr = ip_addr.sin_addr.s_addr;
+    uint32_t ip_header_checksum = 0;
+    int iphdr_size = sizeof(iphdr);
+    auto ip_header_addr = (uint16_t*)ip_header;
 
-    while (n > 1) {
-        sum += ntohs(*addr++);
-        n -= 2;
+    while (iphdr_size > 1) {
+        ip_header_checksum += ntohs(*ip_header_addr++);
+        iphdr_size -= 2;
     }
-    if (n > 0) {
-        sum += *(uint8_t*)addr;
+    if (iphdr_size > 0) {
+        ip_header_checksum += *(uint8_t*)ip_header_addr;
     }
-    while (sum >> 16) {
-        sum = (sum & 0xFFFF) + (sum >> 16);
+    while (ip_header_checksum >> 16) {
+        ip_header_checksum =
+            (ip_header_checksum & 0xFFFF) + (ip_header_checksum >> 16);
     }
 
-    ip->check = htons(~sum);
+    ip_header->check = htons(~ip_header_checksum);
 
-    udp->check = 0; // no checksum needed for udp
-    udp->source = htons(source_port);
-    udp->dest = htons(port);
-    udp->len = htons(sizeof(struct udphdr) + strlen(chr_payload));
+    udp_header->check = 0; // No checksum needed for UDP
+    udp_header->source = htons(source_port);
+    udp_header->dest = htons(port);
+    udp_header->len = htons(sizeof(struct udphdr) + strlen(chr_payload));
     for (int i = 0; i < 5; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        if (sendto(socket_fd, packet, total_length, 0,
+        if (sendto(socket_fd, packet, packet_total_length, 0,
                    (struct sockaddr*)&ip_addr, sizeof(ip_addr)) < 0) {
 
             std::cerr << "Evil port is NOT happy\n";
@@ -452,7 +454,7 @@ void solve_puzzle_dragon() {}
  */
 void assign_puzzle_to_port(sockaddr_in& ip_addr,
                            const std::array<int, 4>& ports) {
-    bool secret_done = false;
+    bool is_secret_done = false;
     bool evil_done = false;
 
     std::array<std::string, 4> port_messages = {
@@ -481,23 +483,23 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
             // If the there isn't a match, then find function will return the
             // null position.
             if (recieved_msg.find(port_messages[0]) != std::string::npos &&
-                !secret_done) {
+                !is_secret_done) {
                 solve_puzzle_secret(ip_addr, ports[i]);
-                secret_done = true; // need to finish secret before evil port is
-                                    // done, we need the sigil.
+                is_secret_done = true; // Need to finish secret before evil port
+                                       // is done, we need the sigil.
             } else if ((recieved_msg.find(port_messages[1]) !=
                         std::string::npos) &&
-                       secret_done && !evil_done) {
+                       is_secret_done && !evil_done) {
 
                 solve_puzzle_evil(ip_addr, ports[i]);
                 evil_done = true;
             } else if ((recieved_msg.find(port_messages[2]) !=
                         std::string::npos) &&
-                       (secret_done && evil_done)) {
+                       (is_secret_done && evil_done)) {
                 solve_puzzle_guardian(ip_addr, ports[i]);
             }
         }
-        if (evil_done && secret_done) // yuck !
+        if (evil_done && is_secret_done) // yuck !
             break;
     }
 }
