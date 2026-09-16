@@ -406,7 +406,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // Send the packet (well, ackthually, it's a datagram, since it's UDP).
+    // Send the packet (well, ackthually, it's a datagram, since it's UDP ☝️🤓).
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
