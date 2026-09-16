@@ -235,21 +235,20 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     // fun fact, this is a prime,
     // More formally, this is the eight Mersenne prime,
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
-    char payload[1024] = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24";
+    char payload_1[1024] = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24";
     int offset = 39;
-    payload[offset] = (secret_number >> 24) & 0xFF;
-    payload[offset + 1] = (secret_number >> 16) & 0xFF;
-    payload[offset + 2] = (secret_number >> 8) & 0xFF;
-    payload[offset + 3] = secret_number & 0xFF;
+    payload_1[offset] = (secret_number >> 24) & 0xFF;
+    payload_1[offset + 1] = (secret_number >> 16) & 0xFF;
+    payload_1[offset + 2] = (secret_number >> 8) & 0xFF;
+    payload_1[offset + 3] = secret_number & 0xFF;
 
-    std::string response = send_recv(ip_addr, port, payload, 43);
+    std::string response = send_recv(ip_addr, port, payload_1, 43);
     const char* cstr = response.c_str();
     group_id = cstr[0];
     char challenge_chr[4];
-    challenge_chr[0] = cstr[1];
-    challenge_chr[1] = cstr[2];
-    challenge_chr[2] = cstr[3];
-    challenge_chr[3] = cstr[4];
+    for (int i = 0; i < 4; i++) {
+        challenge_chr[i] = cstr[i + 1];
+    }
 
     uint32_t challenge_int = static_cast<uint8_t>(cstr[1]) << 24 |
                              static_cast<uint8_t>(cstr[2]) << 16 |
@@ -260,20 +259,20 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     // TODO: sigil_chr seems to be unused?
     auto sigil_chr = reinterpret_cast<const char*>(&sigil);
 
-    char payload2[1024];
+    char payload_2[1024];
 
-    payload2[0] = group_id;
-    payload2[1] = (sigil >> 24) & 0xFF;
-    payload2[2] = (sigil >> 16) & 0xFF;
-    payload2[3] = (sigil >> 8) & 0xFF;
-    payload2[4] = sigil & 0xFF;
-    std::string msg = send_recv(ip_addr, port, payload2, 5);
+    payload_2[0] = group_id;
+    payload_2[1] = (sigil >> 24) & 0xFF;
+    payload_2[2] = (sigil >> 16) & 0xFF;
+    payload_2[3] = (sigil >> 8) & 0xFF;
+    payload_2[4] = sigil & 0xFF;
+    std::string msg = send_recv(ip_addr, port, payload_2, 5);
     const char* msgcstr = msg.c_str();
+
     char secret_port[5];
-    secret_port[0] = msgcstr[69];
-    secret_port[1] = msgcstr[70];
-    secret_port[2] = msgcstr[71];
-    secret_port[3] = msgcstr[72];
+    for (int i = 0; i < 4; i++) {
+        secret_port[i] = msgcstr[i + 69];
+    }
     secret_port[4] = '\0';
     secret_ports.push_back(std::stoi(secret_port));
 }
