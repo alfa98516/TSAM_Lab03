@@ -20,6 +20,26 @@
 #include <utility>
 #include <vector>
 
+// For me, who is a macOs user 😭
+#ifdef __APPLE__
+    #define iphdr ip
+
+    #define saddr ip_src.s_addr
+    #define daddr ip_dst.s_addr
+    #define tot_len ip_len
+    #define version ip_v
+    #define ihl ip_hl 
+    #define tos ip_tos 
+    #define id ip_id 
+    #define frag_off ip_off 
+    #define ttl ip_ttl 
+    #define protocol ip_p  
+    #define source uh_sport
+    #define dest uh_dport
+    #define len uh_ulen
+#endif
+
+
 uint32_t sigil;
 uint8_t group_id;
 std::vector<int> secret_ports;
@@ -259,7 +279,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     int source_port = 5043; // Perhaps bad practice to use a literal here,
     // should really be looking for unused ports on the machine.
     char* udp_payload_ptr = packet + sizeof(iphdr) + sizeof(udphdr);
-
     auto ip_header = (struct iphdr*)packet;
     auto udp_header = (struct udphdr*)(packet + sizeof(struct iphdr));
     memcpy(udp_payload_ptr, auth_payload, strlen(auth_payload));
@@ -295,9 +314,16 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
             (ip_header_checksum & 0xFFFF) + (ip_header_checksum >> 16);
     }
 
+    #ifdef __APPLE__
+    ip_header->ip_sum = htons(~ip_header_checksum);
+    #else
     ip_header->check = htons(~ip_header_checksum);
-
+    #endif
+    #ifdef __APPLE__
+    udp_header->uh_sum = 0;
+    #else
     udp_header->check = 0; // No checksum needed for UDP
+    #endif
     udp_header->source = htons(source_port);
     udp_header->dest = htons(port);
     udp_header->len = htons(sizeof(struct udphdr) + strlen(auth_payload));
