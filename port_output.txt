@@ -1,0 +1,211 @@
+┌──[10:24:34](andromedy@NYX)[~/Documents/Code/TSAM_Lab01/code](󰘬 dev-a3 M1 ⚑)
+└─$ ./scanner 130.208.246.98 4000 4100
+Scan Progress:100%
+--- Received buffer for port:41487---
+
+The dark arts of network programming lead to powers some consider to be...unnatural. I am an evil port, I shall speak only with evil entities! (https://en.wikipedia.org/wiki/Evil_bit)
+
+
+--- Received buffer for port:41487---
+
+The dark arts of network programming lead to powers some consider to be...unnatural. I am an evil port, I shall speak only with evil entities! (https://en.wikipedia.org/wiki/Evil_bit)
+
+
+--- Received buffer for port:41487---
+
+The dark arts of network programming lead to powers some consider to be...unnatural. I am an evil port, I shall speak only with evil entities! (https://en.wikipedia.org/wiki/Evil_bit)
+
+
+--- Received buffer for port:41487---
+
+The dark arts of network programming lead to powers some consider to be...unnatural. I am an evil port, I shall speak only with evil entities! (https://en.wikipedia.org/wiki/Evil_bit)
+
+
+--- Received buffer for port:49423---
+
+e
+4���$��O�Z{���l<8I am the guardian of the secret spell. The lords of the network do not want us to use these newer scrolls (IPv6), but I found a way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address them accordingly.
+
+--- Received buffer for port:49423---
+
+e��l�;�0��bK"��m�W*��^��Jztc�vóBR���l#�I am the guardian of the secret spell. The lords of the network do not want us to use these newer scrolls (IPv6), but I found a way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address them accordingly.
+
+--- Received buffer for port:49423---
+
+e�9l�:�p�tt�j�}+����t��l
+��|y�l.gI am the guardian of the secret spell. The lords of the network do not want us to use these newer scrolls (IPv6), but I found a way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address them accordingly.
+
+--- Received buffer for port:49423---
+
+e�{l�;�.
+�g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords of the network do not want us to use these newer scrolls (IPv6), but I found a way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address them accordingly.
+
+--- Received buffer for port:49423---
+
+_�Y�L`�xg��f-�l�I am the guardian of the secret spell. The lords of the network do not want us to use these newer scrolls (IPv6), but I found a way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address them accordingly.
+
+--- Received buffer for port:54031---
+
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your 
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID, 
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret.   May the Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+
+--- Received buffer for port:54031---
+
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your 
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID, 
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret.   May the Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+
+--- Received buffer for port:54031---
+
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your 
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID, 
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret.   May the Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+
+--- Received buffer for port:54031---
+
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your 
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID, 
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret.   May the Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+
+--- Received buffer for port:54031---
+
+Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher Relay for Enchanted Transmissions)!
+Here are the rites required to gain access to the secret I guard:
+1. Forge a 32-bit secret number, and keep it safe for later use.
+2. Send me a message beginning with "S.E.C.R.E.T.:", followed by
+   a comma-separated list of the names of every member of your 
+   adventuring party as your institution named them,
+   and your secret number.
+   Your secret number must occupy the final 4 bytes of the message.
+3. I shall answer with a 5-byte missive: the first byte bears your group ID, 
+   while the remaining 4 bytes contain a challenge number.
+4. Combine this challenge with your secret number using the XOR spell.
+   The result shall be your 4-byte enchanted sigil.
+5. Now send a 5-byte message: place your group number in the first byte,
+   followed by the 4-byte sigil.
+6. Should your sigil prove true, I shall reveal a hidden secret.   May the Divines favor your quest!
+7. Keep your group ID and sigil safe for future trials, for other ports
+   shall require them. But beware: do not write them in stone!
+
+--- Received buffer for port:65039---
+
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded Online Networks.
+What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them, begin by completing the trials upon the ports revealed by your port-scanning scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+
+--- Received buffer for port:65039---
+
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded Online Networks.
+What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them, begin by completing the trials upon the ports revealed by your port-scanning scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+
+--- Received buffer for port:65039---
+
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded Online Networks.
+What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them, begin by completing the trials upon the ports revealed by your port-scanning scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+
+--- Received buffer for port:65039---
+
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded Online Networks.
+What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them, begin by completing the trials upon the ports revealed by your port-scanning scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+
+--- Received buffer for port:65039---
+
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded Online Networks.
+What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them, begin by completing the trials upon the ports revealed by your port-scanning scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+
+--- Open ports: ---
+4002
+4033
+4051
+4094
