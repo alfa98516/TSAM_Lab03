@@ -338,7 +338,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     int source_port = 5043; // Perhaps bad practice to use a literal here,
     // should really be looking for unused ports on the machine.
     char* udp_payload_ptr = packet + sizeof(iphdr) + sizeof(udphdr);
-
     auto ip_header = (struct iphdr*)packet;
     auto udp_header = (struct udphdr*)(packet + sizeof(struct iphdr));
     memcpy(udp_payload_ptr, auth_payload, strlen(auth_payload));
