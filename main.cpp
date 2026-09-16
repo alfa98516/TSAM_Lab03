@@ -20,6 +20,26 @@
 #include <utility>
 #include <vector>
 
+// For me, who is a macOs user 😭
+#ifdef __APPLE__
+    #define iphdr ip
+
+    #define saddr ip_src.s_addr
+    #define daddr ip_dst.s_addr
+    #define tot_len ip_len
+    #define version ip_v
+    #define ihl ip_hl 
+    #define tos ip_tos 
+    #define id ip_id 
+    #define frag_off ip_off 
+    #define ttl ip_ttl 
+    #define protocol ip_p  
+    #define source uh_sport
+    #define dest uh_dport
+    #define len uh_ulen
+#endif
+
+
 uint32_t sigil;
 uint8_t group_id;
 std::vector<int> secret_ports;
@@ -41,85 +61,6 @@ int parse_port(const char* argument, int argument_number) {
         std::cerr << "Argument " << argument_number << " is too large\n";
     }
     return -1;
-}
-
-/**
- * @brief Scans the given IPv4 address for open UDP ports in the specified
- * range.
- * @param ip_addr The IPv4 address to scan.
- * @param low_port The lower bound of the port range to scan.
- * @param high_port The upper bound of the port range to scan.
- * @return 0 on success, 1 on failure.
- */
-// TODO: port_num seems to be unused?
-std::string get_port_message(const char* ip_addr, int port_num) {
-    const std::string payload = "TSAM_PAYLOAD";
-
-    timeval timeout{};
-    timeout.tv_sec = 1; // Time to wait in seconds.
-
-    struct sockaddr_in dest_addr{}; // Destination IPv4 address.
-    dest_addr.sin_family = AF_INET; // Set address family to IPv4.
-    // Validate IP.
-    int inet_pton_result = inet_pton(AF_INET, ip_addr, &dest_addr.sin_addr);
-
-    // Check if the address is valid.
-    if (inet_pton_result == 0) {
-        std::cerr << "Invalid IPv4 address: " << ip_addr << '\n';
-        return {};
-    }
-
-    // Check if there was an error in converting the IPv4 address.
-    if (inet_pton_result < 0) {
-        perror("inet_pton");
-        return {};
-    }
-
-    // Create UDP socket.
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    // Validate socket creation.
-    if (sock < 0) {
-        perror("Error creating socket!");
-        close(sock);
-        return {};
-    }
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) <
-        0) {
-        close(sock);
-        return {};
-    }
-
-    char data_buffer[2048];
-    struct sockaddr_in src_addr{};
-    socklen_t src_addr_len = sizeof(src_addr);
-
-    // Send 5 packets to the port.
-    for (int i = 0; i < 5; i++) {
-        if (sendto(sock, payload.c_str(), payload.length(), 0,
-                   (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
-            continue;
-        }
-    }
-
-    std::string returned_message;
-    while (true) {
-        ssize_t n_bytes_received =
-            recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
-                     (struct sockaddr*)&src_addr, &src_addr_len);
-        if (n_bytes_received < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
-            }
-            perror("recvfrom");
-            continue;
-        } else {
-            returned_message = ntohs(src_addr.sin_port);
-            break;
-        }
-    }
-    close(sock);
-
-    return returned_message;
 }
 
 /**
@@ -373,9 +314,16 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
             (ip_header_checksum & 0xFFFF) + (ip_header_checksum >> 16);
     }
 
+    #ifdef __APPLE__
+    ip_header->ip_sum = htons(~ip_header_checksum);
+    #else
     ip_header->check = htons(~ip_header_checksum);
-
+    #endif
+    #ifdef __APPLE__
+    udp_header->uh_sum = 0;
+    #else
     udp_header->check = 0; // No checksum needed for UDP
+    #endif
     udp_header->source = htons(source_port);
     udp_header->dest = htons(port);
     udp_header->len = htons(sizeof(struct udphdr) + strlen(auth_payload));
@@ -431,7 +379,40 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     close(raw_socket);
     delete[] packet;
 }
-void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {}
+
+/*e�{l�;�.
+�g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords
+of the network do not want us to use these newer scrolls (IPv6), but I found a
+way.
+Respond in the same manner and tell who you are! Send me a 5-byte message with
+your group id and sigil you got from S.E.C.R.E.T.
+Make sure to wrap the scrolls the same way I did and don't forget to address
+them accordingly.*/
+void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
+    // ------------------------------------------------------------------------
+    // Construct IPv6 header for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Construct UDP header for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Add group_id and sigil payload for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Send the packet (well, ackthually, it's a datagram, since it's UDP).
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Check if we got the right response message.
+    // ------------------------------------------------------------------------
+}
 void solve_puzzle_dragon() {}
 
 /**
