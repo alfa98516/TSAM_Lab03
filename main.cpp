@@ -362,7 +362,31 @@ Respond in the same manner and tell who you are! Send me a 5-byte message with
 your group id and sigil you got from S.E.C.R.E.T.
 Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
-void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {}
+void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
+    // ------------------------------------------------------------------------
+    // Construct IPv6 header for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Construct UDP header for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Add group_id and sigil payload for packet.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Send the packet (well, ackthually, it's a datagram, since it's UDP).
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // Check if we got the right response message.
+    // ------------------------------------------------------------------------
+}
 void solve_puzzle_dragon() {}
 
 /**
