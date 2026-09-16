@@ -311,6 +311,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
         perror("Connecting failed\n");
     }
 
+    struct sockaddr_in local_source_addr;
     if (socklen_t local_addr_len = sizeof(local_source_addr);
         getsockname(routing_socket, (struct sockaddr*)&local_source_addr,
                     &local_addr_len) < 0) {
