@@ -68,6 +68,7 @@ std::string dummy_recieve(int index) {
  * @param high_port The upper bound of the port range to scan.
  * @return 0 on success, 1 on failure.
  */
+// TODO: port_num seems to be unused?
 std::string get_port_message(const char* ip_addr, int port_num) {
     const std::string payload = "TSAM_PAYLOAD";
 
@@ -149,6 +150,7 @@ std::string get_port_message(const char* ip_addr, int port_num) {
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
                       size_t msg_length) {
+    // TODO: max_msg_length seems to be unused?
     constexpr std::size_t max_msg_length = 2048;
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
@@ -255,7 +257,8 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
                              static_cast<uint8_t>(cstr[4]);
 
     sigil = challenge_int ^ secret_number;
-    const char* sigil_chr = reinterpret_cast<const char*>(&sigil);
+    // TODO: sigil_chr seems to be unused?
+    auto sigil_chr = reinterpret_cast<const char*>(&sigil);
 
     char payload2[1024];
 
