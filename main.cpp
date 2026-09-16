@@ -311,20 +311,20 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
     }
 
     struct sockaddr_in local_addr;
-    socklen_t addr_len = sizeof(local_addr);
-    if (getsockname(sock, (struct sockaddr*)&local_addr, &addr_len) < 0) {
+    if (socklen_t addr_len = sizeof(local_addr);
+        getsockname(sock, (struct sockaddr*)&local_addr, &addr_len) < 0) {
         perror("Error getting socket name\n");
     }
 
     // creating socket for sending/reciving
-    char chrPayload[6];
+    char chr_payload[6];
 
-    chrPayload[0] = group_id;
-    chrPayload[1] = (sigil >> 24) & 0xFF;
-    chrPayload[2] = (sigil >> 16) & 0xFF;
-    chrPayload[3] = (sigil >> 8) & 0xFF;
-    chrPayload[4] = sigil & 0xFF;
-    chrPayload[5] = '\0';
+    chr_payload[0] = group_id;
+    chr_payload[1] = (sigil >> 24) & 0xFF;
+    chr_payload[2] = (sigil >> 16) & 0xFF;
+    chr_payload[3] = (sigil >> 8) & 0xFF;
+    chr_payload[4] = sigil & 0xFF;
+    chr_payload[5] = '\0';
 
     const std::string payload =
         "THAT'S IT IM FUCKING EVIL NOW, LIGHTNING SOUND EFFECT *BOOOOOM*";
@@ -334,8 +334,8 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
         close(socket_fd);
         return;
     }
-    int one = 1;
-    if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) < 0) {
+    if (int one = 1;
+        setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) < 0) {
         perror("setsockopt IP_HDRINCL");
         close(socket_fd);
         return;
@@ -350,18 +350,18 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
     }
 
     int total_length =
-        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(chrPayload);
+        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(chr_payload);
 
-    char* packet = new char[total_length];
+    auto packet = new char[total_length];
     memset(packet, 0, total_length);
 
     int source_port = 5043; // perhaps bad practice to use a literal here,
     // should really be looking for unused ports on the machine.
 
     char* data = packet + sizeof(iphdr) + sizeof(udphdr);
-    struct iphdr* ip = (struct iphdr*)packet;
-    struct udphdr* udp = (struct udphdr*)(packet + sizeof(struct iphdr));
-    memcpy(data, chrPayload, strlen(chrPayload));
+    auto ip = (struct iphdr*)packet;
+    auto udp = (struct udphdr*)(packet + sizeof(struct iphdr));
+    memcpy(data, chr_payload, strlen(chr_payload));
     ip->version = 4;
     ip->ihl = 5;
     ip->tos = 0;
@@ -374,7 +374,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
     ip->daddr = ip_addr.sin_addr.s_addr;
     uint32_t sum = 0;
     int n = sizeof(iphdr);
-    uint16_t* addr = (uint16_t*)ip;
+    auto addr = (uint16_t*)ip;
 
     while (n > 1) {
         sum += ntohs(*addr++);
@@ -392,7 +392,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
     udp->check = 0; // no checksum needed for udp
     udp->source = htons(source_port);
     udp->dest = htons(port);
-    udp->len = htons(sizeof(struct udphdr) + strlen(chrPayload));
+    udp->len = htons(sizeof(struct udphdr) + strlen(chr_payload));
     for (int i = 0; i < 5; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (sendto(socket_fd, packet, total_length, 0,
@@ -420,8 +420,7 @@ void solve_puzzle_evil(sockaddr_in& ip_addr, const int port) {
                 std::cout << "TOO many bytes, evil port is so evil :(\n";
                 break;
             }
-            std::string evil_string =
-                std::string(evil_response, nbytes_recieved);
+            auto evil_string = std::string(evil_response, nbytes_recieved);
             if (evil_string.find(
                     "The dark arts of network programming lead to powers "
                     "some consider to be...unnatural. I am an evil port, I "
