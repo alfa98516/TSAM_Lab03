@@ -9,6 +9,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <ratio>
 #include <string>
@@ -393,15 +394,48 @@ Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
-    // Construct IPv6 header for packet.
+    // Extract the Guardian's IPv6 header that it gave us.
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // Construct UDP header for packet.
+    // Construct IPv6 header for the packet.
+    // ------------------------------------------------------------------------
+    struct ip6_hdr ipv6_header{};
+    // Using `{}` here↑ will initialize all the fields to 0.
+    // An IPv6 header is always 40B (320b) in size.
+    // --- Flow label ---
+    // - Version(4b) = 6,
+    // - Traffic Class(8b) = 0,
+    // - Flow Label(20b) = 0,
+    ipv6_header.ip6_flow = htonl(6u << (8 + 20));
+
+    // - Payload Length(16b) = The *payload* length, ∴ this excludes the
+    //   header.
+    constexpr uint16_t payload_size = 5;
+    ipv6_header.ip6_plen = htons(sizeof(struct udphdr) + payload_size);
+
+    // - Next Header(8b) = “Which protocol header comes next after the IPv6
+    //   header?”
+    ipv6_header.ip6_nxt = IPPROTO_UDP;
+
+    // - Hop Limit(8b) = Like if TTL (Time To Live) actually had a good name
+    //   that made sense. “Time To Live” has nothing to do with time.
+    ipv6_header.ip6_hlim = 64; // A common convention/default.
+
+    // - Source IPv6 addrress (128b) = The destination address (us) we got from
+    //   the IPv6 Guardian header.
+    // ipv6_header.ip6_src =
+
+    // - Destination IPv6 address (128b) = The source address (the server) we
+    //   got from the IPv6 Guardian header.
+    // ipv6_header.ip6_dst =
+
+    // ------------------------------------------------------------------------
+    // Construct UDP header for the packet.
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // Add group_id and sigil payload for packet.
+    // Add group_id and sigil payload for the packet.
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
