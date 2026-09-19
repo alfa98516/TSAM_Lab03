@@ -490,7 +490,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // - Version(4b) = 6,
     // - Traffic Class(8b) = 0,
     // - Flow Label(20b) = 0,
-    packet_ipv6_header->ip6_flow = htonl(6u << (8 + 20));
+    packet_ipv6_header->ip6_flow = guardian_ipv6_header.ip6_flow;
 
     // - Payload Length(16b) = The *payload* length, ∴ this excludes the
     //   header. Here, the payload is a UDP datagram = UDP header + UDP payload.
@@ -559,7 +559,11 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     │ padding                     1 B │
     └─────────────────────────────────┘
     */
+#ifdef __APPLE__
+    packet_udp_header->uh_sum = 0;
+#else
     packet_udp_header->check = 0; // Make sure it's 0 before we start.
+#endif
     // ----- 1. Gather the data -----
     // --- IPv6 pseudo-header ---
     // Size of the checksum data buffer.
@@ -581,7 +585,8 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Copy the group ID.
     packet_payload[0] = group_id;
     // Copy the sigil.
-    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
+    uint32_t network_sigil = htonl(sigil);
+    std::memcpy(packet_payload + 1, &network_sigil, sizeof(network_sigil));
     // Copy the UDP header.
     std::memcpy(checksum_data + ipv6_header_size, packet_udp_header,
                 sizeof(struct udphdr));
@@ -598,8 +603,11 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
         udp_checksum = 0xFFFF;
     }
     // ----- 4. Set the checksum -----
+#ifdef __APPLE__
+    packet_udp_header->uh_sum = htons(udp_checksum);
+#else
     packet_udp_header->check = htons(udp_checksum);
-
+#endif
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
     // ------------------------------------------------------------------------
