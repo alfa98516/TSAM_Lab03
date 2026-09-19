@@ -374,7 +374,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
                 std::string evil_secret_port = response_packet.substr(
                     response_length - 4, response_length);
                 secret_ports.push_back(std::stoi(evil_secret_port));
-                std::cout << evil_secret_port << '\n';
                 break;
             }
         }
