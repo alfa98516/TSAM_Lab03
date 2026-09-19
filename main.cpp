@@ -44,6 +44,7 @@
 uint32_t sigil;
 uint8_t group_id;
 std::vector<int> secret_ports;
+std::string secret_spell; // Fuck J.K. Rowling.
 
 namespace {
 
@@ -614,6 +615,14 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     const std::string guardian_response =
         send_recv(ip_addr, port, packet, packet_size);
     std::cout << "\nGuardian's response:\n" << guardian_response << '\n';
+    for (int i = 0; i < guardian_response.length(); i++) {
+        char g_char = guardian_response[i];
+        if (g_char == '"') {
+            secret_spell = guardian_response.substr(
+                i + 1, guardian_response.length() - i - 1);
+            break;
+        }
+    }
 
     // ------------------------------------------------------------------------
     // Send the packet (well, ackthually, it's a datagram, since it's UDP ☝️🤓).
