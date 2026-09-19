@@ -349,7 +349,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
 
     socklen_t sender_addr_len = sizeof(target_addr);
     while (true) {
-        std::cout << "its here??\n";
         ssize_t bytes_received =
             recvfrom(raw_socket, evil_response, sizeof(evil_response), 0,
                      (struct sockaddr*)&target_addr, &sender_addr_len);
@@ -366,12 +365,11 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
                 break;
             }
             auto response_packet = std::string(evil_response, bytes_received);
-
             if (response_packet.find(
                     "The dark arts of network programming lead to powers "
                     "some consider to be...unnatural. I am an evil port, I "
                     "shall speak only with evil entities! "
-                    "(https://en.wikipedia.org/wiki/Evil_bit)") !=
+                    "(https://en.wikipedia.org/wiki/Evil_bit)") ==
                 std::string::npos) {
 
                 int response_length = response_packet.length();
@@ -379,7 +377,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
                 std::string evil_secret_port = response_packet.substr(
                     response_length - 4, response_length);
                 secret_ports.push_back(std::stoi(evil_secret_port));
-                std::cout << evil_secret_port << '\n';
                 break;
             }
         }
@@ -704,12 +701,11 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
             puzzle_ports.insert({"DRAGON", ports[i]});
         }
     }
-    std::cout << ports[0] << '\n';
-    std::cout << ports[1] << '\n';
-    std::cout << ports[2] << '\n';
-    std::cout << ports[3] << '\n';
     solve_puzzle_secret(ip_addr, puzzle_ports.find("SECRET")->second);
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
     solve_puzzle_evil(ip_addr, puzzle_ports.find("EVIL")->second);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
     solve_puzzle_guardian(ip_addr, puzzle_ports.find("GUARDIAN")->second);
 }
 
