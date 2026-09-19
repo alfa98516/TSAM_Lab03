@@ -676,7 +676,50 @@ begin by completing the trials upon the ports revealed by your port-scanning
 scrying.
 Happy hunting, adventurer - and may your path lead to Sovngarde!
 */
-void solve_puzzle_dragon() {}
+void solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
+    // Convert
+    std::string dragon_payload;
+    for (std::size_t i = 0; i < secret_ports.size(); ++i) {
+        if (i != 0) {
+            dragon_payload += ',';
+        }
+        dragon_payload += std::to_string(secret_ports[i]);
+    }
+    std::cout << "\nThe payload: " << dragon_payload << '\n';
+
+    std::string dragon_response = send_recv(
+        ip_addr, port, dragon_payload.c_str(), dragon_payload.length());
+    std::cout << "\nThe dragon response: " << dragon_response << '\n';
+    // Payload we'll use for the knocks.
+    char knock_payload[2048]{};
+    // --- 2. Populate the payload. ---
+    // Copy the group ID.
+    knock_payload[0] = group_id;
+    // Copy the sigil.
+    uint32_t network_sigil = htonl(sigil);
+    std::memcpy(knock_payload + 1, &network_sigil, sizeof(network_sigil));
+    // Copy the secret spell/phrase into the payload.
+    std::memcpy(knock_payload + 1 + sizeof(network_sigil), &secret_spell,
+                sizeof(secret_spell));
+    // Change string, e.g., "4012,4033,4033,4033,4012,4012", to a vector of
+    // integers:
+    std::vector<std::string> knock_ports;
+    std::string current_port = "";
+    for (auto character : dragon_response) {
+        if (character == ',') {
+            knock_ports.push_back(current_port);
+            current_port = "";
+            continue;
+        }
+        current_port += character;
+    }
+    knock_ports.push_back(current_port);
+    // std::cout << "\nKnock ports whateverrr: \n";
+    // for (const std::string& fucker : knock_ports) {
+    //     std::cout << fucker << '\n';
+    // }
+    // Do the knocks on the ports:
+}
 
 /**
  * @brief Functions that assigns each port to the given problem
@@ -686,9 +729,6 @@ void solve_puzzle_dragon() {}
  */
 void assign_puzzle_to_port(sockaddr_in& ip_addr,
                            const std::array<int, 4>& ports) {
-    bool is_secret_done = false;
-    bool evil_done = false;
-
     std::array<std::string, 4> port_messages = {
         "Greetings, adventurer, from S.E.C.R.E.T. (Sacred Elder Cipher "
         "Relay ",
@@ -724,6 +764,9 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3));
     solve_puzzle_guardian(ip_addr, puzzle_ports.find("GUARDIAN")->second);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    solve_puzzle_dragon(ip_addr, puzzle_ports.find("DRAGON")->second);
 }
 
 } // namespace
