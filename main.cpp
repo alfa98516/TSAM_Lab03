@@ -562,7 +562,11 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     │ padding                     1 B │
     └─────────────────────────────────┘
     */
+#ifdef __APPLE__
+    packet_udp_header->uh_sum = 0;
+#else
     packet_udp_header->check = 0; // Make sure it's 0 before we start.
+#endif
     // ----- 1. Gather the data -----
     // --- IPv6 pseudo-header ---
     // Size of the checksum data buffer.
@@ -601,8 +605,11 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
         udp_checksum = 0xFFFF;
     }
     // ----- 4. Set the checksum -----
+#ifdef __APPLE__
+    packet_udp_header->uh_sum = htons(udp_checksum);
+#else
     packet_udp_header->check = htons(udp_checksum);
-
+#endif
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
     // ------------------------------------------------------------------------
