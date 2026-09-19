@@ -393,6 +393,8 @@ your group id and sigil you got from S.E.C.R.E.T.
 Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
+    constexpr size_t ipv6_header_size = 40;
+    constexpr size_t packet_payload_size = 5;
     // ------------------------------------------------------------------------
     // Get the Guardian's message.
     // ------------------------------------------------------------------------
@@ -402,9 +404,6 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
     // Extract the Guardian's IPv6 header that it gave us.
     // ------------------------------------------------------------------------
-    // First, extract the IPv6 header from the guardian's message:
-    constexpr size_t ipv6_header_size = 40;
-
     // Verify the size.
     if (guardian_message.size() < ipv6_header_size) {
         std::cerr << "Guardian mesage size is too small for an IPv6 header";
@@ -422,35 +421,49 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
     // Construct IPv6 header for the packet.
     // ------------------------------------------------------------------------
-    struct ip6_hdr ipv6_header{};
-    // Using `{}` here↑ will initialize all the fields to 0.
+    constexpr size_t packet_size =
+        sizeof(struct ip6_hdr) + sizeof(struct udphdr) + packet_payload_size;
+
+    // The packet we'll send to the Guardian.
+    char packet[packet_size]{};
+
+    // The packet's IPv6 header.
+    auto* packet_ipv6_header = reinterpret_cast<struct ip6_hdr*>(packet);
+    // The packet's UDP header.
+    auto* packet_udp_header =
+        reinterpret_cast<struct udphdr*>(packet + sizeof(struct ip6_hdr));
+    // The packet's payload that we'll use to authenticate ourselves with the
+    // Guardian. Will contain the group ID and the sigil we got from Secret.
+    char* packet_payload =
+        packet + sizeof(struct ip6_hdr) + sizeof(struct udphdr);
+
     // An IPv6 header is always 40B (320b) in size.
     // --- Flow label ---
     // - Version(4b) = 6,
     // - Traffic Class(8b) = 0,
     // - Flow Label(20b) = 0,
-    ipv6_header.ip6_flow = htonl(6u << (8 + 20));
+    packet_ipv6_header->ip6_flow = htonl(6u << (8 + 20));
 
     // - Payload Length(16b) = The *payload* length, ∴ this excludes the
-    //   header.
-    constexpr uint16_t payload_size = 5;
-    ipv6_header.ip6_plen = htons(sizeof(struct udphdr) + payload_size);
+    //   header. Here, the payload is a UDP datagram = UDP header + UDP payload.
+    packet_ipv6_header->ip6_plen =
+        htons(sizeof(struct udphdr) + packet_payload_size);
 
     // - Next Header(8b) = “Which protocol header comes next after the IPv6
     //   header?”
-    ipv6_header.ip6_nxt = IPPROTO_UDP;
+    packet_ipv6_header->ip6_nxt = IPPROTO_UDP;
 
     // - Hop Limit(8b) = Like if TTL (Time To Live) actually had a good name
     //   that made sense. “Time To Live” has nothing to do with time.
-    ipv6_header.ip6_hlim = 64; // A common convention/default.
+    packet_ipv6_header->ip6_hlim = 64; // A common convention/default.
 
     // - Source IPv6 addrress (128b) = The destination address (us) we got from
     //   the IPv6 Guardian header.
-    ipv6_header.ip6_src = guardian_ipv6_header.ip6_src;
+    packet_ipv6_header->ip6_src = guardian_ipv6_header.ip6_dst;
 
     // - Destination IPv6 address (128b) = The source address (the server) we
     //   got from the IPv6 Guardian header.
-    ipv6_header.ip6_dst = guardian_ipv6_header.ip6_dst;
+    packet_ipv6_header->ip6_dst = guardian_ipv6_header.ip6_src;
 
     // ------------------------------------------------------------------------
     // Construct UDP header for the packet.
