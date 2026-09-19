@@ -557,18 +557,46 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     │ padding                     1 B │
     └─────────────────────────────────┘
     */
+    packet_udp_header->check = 0; // Make sure it's 0 before we start.
     // ----- 1. Gather the data -----
+    // --- IPv6 pseudo-header ---
+    // Size of the checksum data buffer.
+    constexpr size_t checksum_data_size =
+        ipv6_header_size + sizeof(struct udphdr) + packet_payload_size;
+    // The temporary checksum data buffer.
+    char checksum_data[checksum_data_size]{};
+    // Copy IPv6 source address.
+    std::memcpy(checksum_data, &packet_ipv6_header->ip6_src, 16);
+    // IPv6 destination address.
+    std::memcpy(checksum_data + 16, &packet_ipv6_header->ip6_dst, 16);
+    // Copy the UDP (datagram) length.
+    std::memcpy(checksum_data + 32, &datagram_length, sizeof(datagram_length));
+    // zero: Next three bytes are already 0.
+    // Set Next Header (= UDP).
+    checksum_data[39] = IPPROTO_UDP;
+    // --- The rest ---
+    // Copy the UDP header.
+    std::memcpy(checksum_data + ipv6_header_size, packet_udp_header,
+                sizeof(struct udphdr));
+    // Copy UDP data (here we add our payload).
+    std::memcpy(checksum_data + ipv6_header_size + sizeof(struct udphdr),
+                packet_payload, packet_payload_size);
+    // --- 2. Populate the payload. ---
+    // Copy the group ID.
+    packet_payload[0] = group_id;
+    // Copy the sigil.
+    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
 
-    // ----- 2. Calculate the checksum -----
-    // udp_checksum = calculate_internet_checksum(guardian_message,
-    // datagram_length)
-    // ----- 3. Set the checksum -----
-    // TODO: Set the UDP datagram's checksum.
-    packet_udp_header->check = 0; // TODO: calculate this properly. Can't use 0.
-
-    // ------------------------------------------------------------------------
-    // Add group_id and sigil payload for the packet.
-    // ------------------------------------------------------------------------
+    // ----- 3. Calculate the checksum -----
+    uint16_t udp_checksum = calculate_internet_checksum(
+        reinterpret_cast<const uint8_t*>(checksum_data), sizeof(checksum_data));
+    // For the rare edge case. If the UDP checksum = 0, that has a special
+    // meaning, so we set it to 0xFFFF instead.
+    if (udp_checksum == 0) {
+        udp_checksum = 0xFFFF;
+    }
+    // ----- 4. Set the checksum -----
+    packet_udp_header->check = htons(udp_checksum);
 
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
