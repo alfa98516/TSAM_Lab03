@@ -575,17 +575,17 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Set Next Header (= UDP).
     checksum_data[39] = IPPROTO_UDP;
     // --- The rest ---
+    // --- 2. Populate the payload. ---
+    // Copy the group ID.
+    packet_payload[0] = group_id;
+    // Copy the sigil.
+    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
     // Copy the UDP header.
     std::memcpy(checksum_data + ipv6_header_size, packet_udp_header,
                 sizeof(struct udphdr));
     // Copy UDP data (here we add our payload).
     std::memcpy(checksum_data + ipv6_header_size + sizeof(struct udphdr),
                 packet_payload, packet_payload_size);
-    // --- 2. Populate the payload. ---
-    // Copy the group ID.
-    packet_payload[0] = group_id;
-    // Copy the sigil.
-    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
 
     // ----- 3. Calculate the checksum -----
     uint16_t udp_checksum = calculate_internet_checksum(
