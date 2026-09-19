@@ -493,7 +493,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // - Version(4b) = 6,
     // - Traffic Class(8b) = 0,
     // - Flow Label(20b) = 0,
-    packet_ipv6_header->ip6_flow = htonl(6u << (8 + 20));
+    packet_ipv6_header->ip6_flow = guardian_ipv6_header.ip6_flow;
 
     // - Payload Length(16b) = The *payload* length, ∴ this excludes the
     //   header. Here, the payload is a UDP datagram = UDP header + UDP payload.
@@ -588,7 +588,8 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Copy the group ID.
     packet_payload[0] = group_id;
     // Copy the sigil.
-    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
+    uint32_t network_sigil = htonl(sigil);
+    std::memcpy(packet_payload + 1, &network_sigil, sizeof(network_sigil));
     // Copy the UDP header.
     std::memcpy(checksum_data + ipv6_header_size, packet_udp_header,
                 sizeof(struct udphdr));
