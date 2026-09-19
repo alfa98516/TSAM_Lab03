@@ -123,11 +123,14 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
             continue;
         } else {
             if (nbytes_recieved >= 2048) {
+                close(socket_fd);
                 return "ERROR";
             }
+            close(socket_fd);
             return std::string(data_buffer, nbytes_recieved);
         }
     }
+    close(socket_fd);
     return "NO_RESPONSE";
 }
 
@@ -373,7 +376,6 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
 
                 std::string evil_secret_port = response_packet.substr(
                     response_length - 4, response_length);
-
                 secret_ports.push_back(std::stoi(evil_secret_port));
                 std::cout << evil_secret_port << '\n';
                 break;
@@ -459,6 +461,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
 
     // The IPv6 header from the Guardian's message.
     struct ip6_hdr guardian_ipv6_header{};
+    //
     // Copy the IPv6 header bytes into guardian_ipv6_header.
     std::memcpy(&guardian_ipv6_header,
                 guardian_message.data(), /*← Start at the char buffer.*/
@@ -665,36 +668,29 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
 
     // Initialize return array
 
-    std::array<std::pair<std::string, int>, 4> puzzle_ports;
-    while (1) {
-        for (int i = 0; i < 4; i++) {
+    std::vector<std::pair<std::string, int>> puzzle_ports;
+    for (int i = 0; i < 4; i++) {
 
-            std::string recieved_msg =
-                send_recv(ip_addr, ports[i], "payload", 7);
-            if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
-                continue;
-            }
-            // If the there isn't a match, then find function will return the
-            // null position.
-            if (recieved_msg.find(port_messages[0]) != std::string::npos &&
-                !is_secret_done) {
-                solve_puzzle_secret(ip_addr, ports[i]);
-                is_secret_done = true; // Need to finish secret before evil port
-                                       // is done, we need the sigil.
-            } else if ((recieved_msg.find(port_messages[1]) !=
-                        std::string::npos) &&
-                       is_secret_done && !evil_done) {
-
-                solve_puzzle_evil(ip_addr, ports[i]);
-                evil_done = true;
-            } else if ((recieved_msg.find(port_messages[2]) !=
-                        std::string::npos) &&
-                       (is_secret_done && evil_done)) {
-                solve_puzzle_guardian(ip_addr, ports[i]);
-            }
+        std::string recieved_msg = send_recv(ip_addr, ports[i], "payload", 7);
+        if (recieved_msg == "ERROR" || recieved_msg == "NO_RESPONSE") {
+            continue;
         }
-        if (evil_done && is_secret_done) // yuck !
-            break;
+        // If the there isn't a match, then find function will return the
+        // null position.
+        if (recieved_msg.find(port_messages[0]) != std::string::npos &&
+            !is_secret_done) {
+            puzzle_ports solve_puzzle_secret(ip_addr, ports[i]);
+            is_secret_done = true; // Need to finish secret before evil port
+                                   // is done, we need the sigil.
+        } else if ((recieved_msg.find(port_messages[1]) != std::string::npos) &&
+                   is_secret_done && !evil_done) {
+
+            solve_puzzle_evil(ip_addr, ports[i]);
+            evil_done = true;
+        } else if ((recieved_msg.find(port_messages[2]) != std::string::npos) &&
+                   (is_secret_done && evil_done)) {
+            solve_puzzle_guardian(ip_addr, ports[i]);
+        }
     }
 }
 
