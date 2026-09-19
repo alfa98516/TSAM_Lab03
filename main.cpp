@@ -44,7 +44,7 @@
 uint32_t sigil;
 uint8_t group_id;
 std::vector<int> secret_ports;
-std::string secret_spell; // Fuck J.K. Rowling.
+std::string secret_phrase; // Fuck J.K. Rowling.
 
 namespace {
 
@@ -75,7 +75,7 @@ int parse_port(const char* argument, int argument_number) {
  * @returns: A string
  */
 std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
-                      size_t msg_length) {
+                      size_t msg_length, int attempts = 5) {
     if (port < 0 || port > 65535) {
         std::cerr << "Port numbers range between 0 and 65535\n";
         return "ERROR";
@@ -104,7 +104,7 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
     char data_buffer[2048];
     socklen_t src_addr_len = sizeof(ip_addr);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < attempts; i++) {
         ip_addr.sin_port = htons(port);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
@@ -615,15 +615,21 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     const std::string guardian_response =
         send_recv(ip_addr, port, packet, packet_size);
     std::cout << "\nGuardian's response:\n" << guardian_response << '\n';
-    for (int i = 0; i < guardian_response.length(); i++) {
-        char g_char = guardian_response[i];
+    bool quote_found = false;
+    for (auto g_char : guardian_response) {
         if (g_char == '"') {
-            secret_spell = guardian_response.substr(
-                i + 1, guardian_response.length() - i - 1);
-            break;
+            std::cout << "Quote found, baby! :D" << '\n';
+            if (quote_found) {
+                break;
+            }
+            quote_found = true;
+            continue;
+        }
+        if (quote_found) {
+            secret_phrase += g_char;
         }
     }
-
+    std::cout << "Secret phrase!!!!!!!!!!!!: " << secret_phrase << '\n';
     // ------------------------------------------------------------------------
     // Send the packet (well, ackthually, it's a datagram, since it's UDP ☝️🤓).
     //
@@ -685,13 +691,15 @@ void solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
         }
         dragon_payload += std::to_string(secret_ports[i]);
     }
-    std::cout << "\nThe payload: " << dragon_payload << '\n';
+    std::cout << "\nThe Dragon payload: " << dragon_payload << '\n';
 
     std::string dragon_response = send_recv(
         ip_addr, port, dragon_payload.c_str(), dragon_payload.length());
-    std::cout << "\nThe dragon response: " << dragon_response << '\n';
+    std::cout << "\nThe Dragon response: " << dragon_response << '\n';
     // Payload we'll use for the knocks.
-    char knock_payload[2048]{};
+    std::cout << "\nSecret phrase length: " << secret_phrase.length() << '\n';
+    size_t knock_payload_size = 5 + secret_phrase.length();
+    char knock_payload[knock_payload_size]{};
     // --- 2. Populate the payload. ---
     // Copy the group ID.
     knock_payload[0] = group_id;
@@ -699,8 +707,9 @@ void solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
     uint32_t network_sigil = htonl(sigil);
     std::memcpy(knock_payload + 1, &network_sigil, sizeof(network_sigil));
     // Copy the secret spell/phrase into the payload.
-    std::memcpy(knock_payload + 1 + sizeof(network_sigil), &secret_spell,
-                sizeof(secret_spell));
+    std::memcpy(knock_payload + 1 + sizeof(network_sigil),
+                secret_phrase.c_str(), secret_phrase.length());
+    std::cout << "\nThe knock payload: " << knock_payload << '\n';
     // Change string, e.g., "4012,4033,4033,4033,4012,4012", to a vector of
     // integers:
     std::vector<std::string> knock_ports;
@@ -719,6 +728,12 @@ void solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
     //     std::cout << fucker << '\n';
     // }
     // Do the knocks on the ports:
+    for (const std::string& knock_port : knock_ports) {
+        std::cout << knock_port << '\n';
+        std::string knock_response = send_recv(
+            ip_addr, stoi(knock_port), knock_payload, sizeof(knock_payload), 1);
+        std::cout << "\nKnock response: " << knock_response << '\n';
+    }
 }
 
 /**
