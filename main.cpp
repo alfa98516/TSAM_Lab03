@@ -6,6 +6,7 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -201,7 +202,6 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
 }
 
 void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
-
     int routing_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (routing_socket < 0) {
         perror("creating dummy socket did not work\n");
@@ -349,6 +349,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
 
     socklen_t sender_addr_len = sizeof(target_addr);
     while (true) {
+        std::cout << "its here??\n";
         ssize_t bytes_received =
             recvfrom(raw_socket, evil_response, sizeof(evil_response), 0,
                      (struct sockaddr*)&target_addr, &sender_addr_len);
@@ -370,8 +371,9 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
                     "The dark arts of network programming lead to powers "
                     "some consider to be...unnatural. I am an evil port, I "
                     "shall speak only with evil entities! "
-                    "(https://en.wikipedia.org/wiki/Evil_bit)") ==
+                    "(https://en.wikipedia.org/wiki/Evil_bit)") !=
                 std::string::npos) {
+
                 int response_length = response_packet.length();
 
                 std::string evil_secret_port = response_packet.substr(
@@ -560,11 +562,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     │ padding                     1 B │
     └─────────────────────────────────┘
     */
-#ifdef __APPLE__
-    packet_udp_header->uh_sum = 0;
-#else
     packet_udp_header->check = 0; // Make sure it's 0 before we start.
-#endif
     // ----- 1. Gather the data -----
     // --- IPv6 pseudo-header ---
     // Size of the checksum data buffer.
@@ -603,11 +601,8 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
         udp_checksum = 0xFFFF;
     }
     // ----- 4. Set the checksum -----
-#ifdef __APPLE__
-    packet_udp_header->uh_sum = htons(udp_checksum);
-#else
     packet_udp_header->check = htons(udp_checksum);
-#endif
+
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
     // ------------------------------------------------------------------------
@@ -673,9 +668,7 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
         "Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus "
         "for "};
 
-    // Initialize return array
-
-    std::vector<std::pair<std::string, int>> puzzle_ports;
+    std::map<std::string, int> puzzle_ports;
     for (int i = 0; i < 4; i++) {
 
         std::string recieved_msg = send_recv(ip_addr, ports[i], "payload", 7);
@@ -684,21 +677,23 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
         }
         // If the there isn't a match, then find function will return the
         // null position.
-        if (recieved_msg.find(port_messages[0]) != std::string::npos &&
-            !is_secret_done) {
-            puzzle_ports solve_puzzle_secret(ip_addr, ports[i]);
-            is_secret_done = true; // Need to finish secret before evil port
-                                   // is done, we need the sigil.
-        } else if ((recieved_msg.find(port_messages[1]) != std::string::npos) &&
-                   is_secret_done && !evil_done) {
-
-            solve_puzzle_evil(ip_addr, ports[i]);
-            evil_done = true;
-        } else if ((recieved_msg.find(port_messages[2]) != std::string::npos) &&
-                   (is_secret_done && evil_done)) {
-            solve_puzzle_guardian(ip_addr, ports[i]);
+        if (recieved_msg.find(port_messages[0]) != std::string::npos) {
+            puzzle_ports.insert({"SECRET", ports[i]});
+        } else if ((recieved_msg.find(port_messages[1]) != std::string::npos)) {
+            puzzle_ports.insert({"EVIL", ports[i]});
+        } else if ((recieved_msg.find(port_messages[2]) != std::string::npos)) {
+            puzzle_ports.insert({"GUARDIAN", ports[i]});
+        } else if ((recieved_msg.find(port_messages[3]) != std::string::npos)) {
+            puzzle_ports.insert({"DRAGON", ports[i]});
         }
     }
+    std::cout << ports[0] << '\n';
+    std::cout << ports[1] << '\n';
+    std::cout << ports[2] << '\n';
+    std::cout << ports[3] << '\n';
+    solve_puzzle_secret(ip_addr, puzzle_ports.find("SECRET")->second);
+    solve_puzzle_evil(ip_addr, puzzle_ports.find("EVIL")->second);
+    solve_puzzle_guardian(ip_addr, puzzle_ports.find("GUARDIAN")->second);
 }
 
 } // namespace
