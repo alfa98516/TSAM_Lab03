@@ -479,6 +479,18 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
     // Construct UDP header for the packet.
     // ------------------------------------------------------------------------
+    // NOTE: We don't use htons() here, since these are already raw bytes↓.
+    // Set the datagram's source port the the Guardian's destination port.
+    packet_udp_header->source = guardian_udp_header.dest;
+    // Set the datagram's destination port the the Guardian's source port
+    packet_udp_header->dest = guardian_udp_header.source;
+    // Set the datagram's total length (UDP datagram header + UDP datagram
+    // payload).
+    packet_udp_header->len = htons(sizeof(struct udphdr) + packet_payload_size);
+    // TODO: Set the UDP datagram's checksum. For IPv6, UDP normally requires a
+    // checksum. It's calculated over the IPv6 pseudo-header + UDP header + UDP
+    // payload.
+    packet_udp_header->check = 0; // TODO: calculate this properly. Can't use 0.
 
     // ------------------------------------------------------------------------
     // Add group_id and sigil payload for the packet.
