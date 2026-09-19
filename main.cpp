@@ -384,6 +384,53 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     delete[] packet;
 }
 
+uint16_t calculate_internet_checksum(const uint8_t* data, size_t length) {
+    // 1. Divide the payload and headers into 16-bit words: The payload and
+    //    some of the headers (including some IP headers) are all divided into
+    //    16-bit words.
+    //
+    // 2. Sum the 16-bit words: These words are then added together. Whenever
+    //    one of those additions results in a carry, the value is wrapped
+    //    around and you add one to the value again.
+    //
+    // 3. Handle overflow: Wrapping any overflow around. This effectively takes
+    //    the carry bit of the 16-bit addition and adds it to the value.
+    //
+    // 4. Take the one’s complement: Lastly, the one’s complement of the
+    //    resultant sum is taken. A one’s complement sum is performed on all
+    //    the 16-bit values then the one’s complement (i.e., invert all bits)
+    //    is taken of that value to populate the checksum field (with the extra
+    //    condition that a calculated checksum of zero will be changed into all
+    //    one-bits).
+
+    // The sum of all the 16-bit words, stored in a 32-bit integer to handle
+    // overflow.
+    uint32_t sum = 0;
+    // Add pairs of bytes as 16-bit (2-byte) big-endian words.
+    while (length >= 2) {
+        // Combine two bytes into a 16-bit word in big-endian order.
+        uint16_t word = (static_cast<uint16_t>(data[0]) << 8) |
+                        (static_cast<uint16_t>(data[1]));
+        sum += word; // Add the 16-bit word to the sum.
+        data += 2;   // Move to the next 16-bit word.
+        length -= 2; // Decrease the length by 2 bytes.
+    }
+
+    // If there's one byte left, treat it as the “high byte” of a 16-bit word
+    // whose “low byte” is 0.
+    if (length == 1) {
+        sum += (static_cast<uint16_t>(data[0]) << 8);
+    }
+
+    // Handle overflow: If the sum exceeds 16 bits, wrap around the overflow.
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // Take the one’s complement of the sum to get the final checksum.
+    return static_cast<uint16_t>(~sum);
+}
+
 /*e�{l�;�.
 �g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords
 of the network do not want us to use these newer scrolls (IPv6), but I found a
@@ -486,10 +533,37 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     packet_udp_header->dest = guardian_udp_header.source;
     // Set the datagram's total length (UDP datagram header + UDP datagram
     // payload).
-    packet_udp_header->len = htons(sizeof(struct udphdr) + packet_payload_size);
-    // TODO: Set the UDP datagram's checksum. For IPv6, UDP normally requires a
-    // checksum. It's calculated over the IPv6 pseudo-header + UDP header + UDP
-    // payload.
+    uint16_t datagram_length =
+        htons(sizeof(struct udphdr) + packet_payload_size);
+    packet_udp_header->len = datagram_length;
+    // ---------- UDP checksum ----------
+    // For IPv6, UDP normally requires a checksum. It's calculated over the
+    // IPv6 pseudo-header + UDP header + UDP payload.
+    /* Calculatd over this sequence:
+    ┌─────────────────────────────────┐
+    │       IPv6 pseudo-header        │
+    │ IPv6 source address        16 B │
+    │ IPv6 destination address   16 B │
+    │ UDP length                  4 B │
+    │ zero                        3 B │
+    │ Next Header (= UDP)         1 B │
+    ├─────────────────────────────────┤
+    │            The rest             │
+    │ UDP source port             2 B │
+    │ UDP destination port        2 B │
+    │ UDP length                  2 B │
+    │ UDP checksum = 0            2 B │
+    │ UDP data                    5 B │
+    │ padding                     1 B │
+    └─────────────────────────────────┘
+    */
+    // ----- 1. Gather the data -----
+
+    // ----- 2. Calculate the checksum -----
+    // udp_checksum = calculate_internet_checksum(guardian_message,
+    // datagram_length)
+    // ----- 3. Set the checksum -----
+    // TODO: Set the UDP datagram's checksum.
     packet_udp_header->check = 0; // TODO: calculate this properly. Can't use 0.
 
     // ------------------------------------------------------------------------
