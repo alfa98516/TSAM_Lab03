@@ -412,10 +412,9 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
 
     // The IPv6 header from the Guardian's message.
     struct ip6_hdr guardian_ipv6_header{};
-    // Extract the IPv6 header bytes from the string.
-    std::string header_bytes = guardian_message.substr(0, ipv6_header_size);
-    // Copy the IPv6 header bytes into the ip6_hdr struct.
-    std::memcpy(&guardian_ipv6_header, header_bytes.data(),
+    // Copy the IPv6 header bytes into guardian_ipv6_header.
+    std::memcpy(&guardian_ipv6_header,
+                guardian_message.data(), /*← Start at the char buffer.*/
                 sizeof(guardian_ipv6_header));
 
     // ------------------------------------------------------------------------
@@ -464,6 +463,18 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // - Destination IPv6 address (128b) = The source address (the server) we
     //   got from the IPv6 Guardian header.
     packet_ipv6_header->ip6_dst = guardian_ipv6_header.ip6_src;
+
+    // ------------------------------------------------------------------------
+    // Extract the Guardian's UDP header that it gave us.
+    // ------------------------------------------------------------------------
+    // The UDP header from the guardian's message.
+    struct udphdr guardian_udp_header{};
+
+    // Copy the UDP header bytes into guardian_udp_header.
+    std::memcpy(&guardian_udp_header,
+                guardian_message.data() + sizeof(struct ip6_hdr),
+                /*↑ Start at the char buffer, after the IPv6 header.*/
+                sizeof(struct udphdr));
 
     // ------------------------------------------------------------------------
     // Construct UDP header for the packet.
