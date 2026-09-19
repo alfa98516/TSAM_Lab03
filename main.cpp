@@ -6,6 +6,7 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <netinet/in.h>
@@ -106,34 +107,65 @@ std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
 
     for (int i = 0; i < attempts; i++) {
         ip_addr.sin_port = htons(port);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
                    src_addr_len) < 0) {
             continue;
         }
+        while (true) {
+            ssize_t nbytes_recieved =
+                recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
+                         (struct sockaddr*)&ip_addr, &src_addr_len);
+            if (nbytes_recieved < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::cout << "No response from port " << port << '\n';
+                    break;
+                }
+                continue;
+            } else {
+                if (nbytes_recieved >= 2048) {
+                    close(socket_fd);
+                    std::cerr << "thats too many bytes man\n";
+                    return "ERROR";
+                }
+
+                close(socket_fd);
+                return std::string(data_buffer, nbytes_recieved);
+            }
+        }
+        close(socket_fd);
+        return "NO_RESPONSE";
     }
 
-    while (true) {
-        ssize_t nbytes_recieved =
-            recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
-                     (struct sockaddr*)&ip_addr, &src_addr_len);
-        if (nbytes_recieved < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                std::cout << "No response from port " << port << '\n';
-                break;
-            }
-            continue;
-        } else {
-            if (nbytes_recieved >= 2048) {
-                close(socket_fd);
-                return "ERROR";
-            }
-            close(socket_fd);
-            return std::string(data_buffer, nbytes_recieved);
-        }
-    }
-    close(socket_fd);
-    return "NO_RESPONSE";
+    // for (int i = 0; i < attempts; i++) {
+    //     ip_addr.sin_port = htons(port);
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //     if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
+    //                src_addr_len) < 0) {
+    //         continue;
+    //     }
+    // }
+    //
+    // while (true) {
+    //     ssize_t nbytes_recieved =
+    //         recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
+    //                  (struct sockaddr*)&ip_addr, &src_addr_len);
+    //     if (nbytes_recieved < 0) {
+    //         if (errno == EAGAIN || errno == EWOULDBLOCK) {
+    //             std::cout << "No response from port " << port << '\n';
+    //             break;
+    //         }
+    //         continue;
+    //     } else {
+    //         if (nbytes_recieved >= 2048) {
+    //             close(socket_fd);
+    //             return "ERROR";
+    //         }
+    //         close(socket_fd);
+    //         return std::string(data_buffer, nbytes_recieved);
+    //     }
+    // }
+    // close(socket_fd);
+    // return "NO_RESPONSE";
 }
 
 /*
