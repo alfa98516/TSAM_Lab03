@@ -9,6 +9,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <ratio>
 #include <string>
@@ -383,6 +384,53 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     delete[] packet;
 }
 
+uint16_t calculate_internet_checksum(const uint8_t* data, size_t length) {
+    // 1. Divide the payload and headers into 16-bit words: The payload and
+    //    some of the headers (including some IP headers) are all divided into
+    //    16-bit words.
+    //
+    // 2. Sum the 16-bit words: These words are then added together. Whenever
+    //    one of those additions results in a carry, the value is wrapped
+    //    around and you add one to the value again.
+    //
+    // 3. Handle overflow: Wrapping any overflow around. This effectively takes
+    //    the carry bit of the 16-bit addition and adds it to the value.
+    //
+    // 4. Take the one’s complement: Lastly, the one’s complement of the
+    //    resultant sum is taken. A one’s complement sum is performed on all
+    //    the 16-bit values then the one’s complement (i.e., invert all bits)
+    //    is taken of that value to populate the checksum field (with the extra
+    //    condition that a calculated checksum of zero will be changed into all
+    //    one-bits).
+
+    // The sum of all the 16-bit words, stored in a 32-bit integer to handle
+    // overflow.
+    uint32_t sum = 0;
+    // Add pairs of bytes as 16-bit (2-byte) big-endian words.
+    while (length >= 2) {
+        // Combine two bytes into a 16-bit word in big-endian order.
+        uint16_t word = (static_cast<uint16_t>(data[0]) << 8) |
+                        (static_cast<uint16_t>(data[1]));
+        sum += word; // Add the 16-bit word to the sum.
+        data += 2;   // Move to the next 16-bit word.
+        length -= 2; // Decrease the length by 2 bytes.
+    }
+
+    // If there's one byte left, treat it as the “high byte” of a 16-bit word
+    // whose “low byte” is 0.
+    if (length == 1) {
+        sum += (static_cast<uint16_t>(data[0]) << 8);
+    }
+
+    // Handle overflow: If the sum exceeds 16 bits, wrap around the overflow.
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // Take the one’s complement of the sum to get the final checksum.
+    return static_cast<uint16_t>(~sum);
+}
+
 /*e�{l�;�.
 �g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords
 of the network do not want us to use these newer scrolls (IPv6), but I found a
@@ -392,17 +440,163 @@ your group id and sigil you got from S.E.C.R.E.T.
 Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
+    constexpr size_t ipv6_header_size = 40;
+    constexpr size_t packet_payload_size = 5;
     // ------------------------------------------------------------------------
-    // Construct IPv6 header for packet.
+    // Get the Guardian's message.
     // ------------------------------------------------------------------------
+    // The returned guardian message/data payload.
+    const std::string guardian_message = send_recv(ip_addr, port, "payload", 7);
 
     // ------------------------------------------------------------------------
-    // Construct UDP header for packet.
+    // Extract the Guardian's IPv6 header that it gave us.
     // ------------------------------------------------------------------------
+    // Verify the size.
+    if (guardian_message.size() < ipv6_header_size) {
+        std::cerr << "Guardian mesage size is too small for an IPv6 header";
+        return;
+    }
+
+    // The IPv6 header from the Guardian's message.
+    struct ip6_hdr guardian_ipv6_header{};
+    // Copy the IPv6 header bytes into guardian_ipv6_header.
+    std::memcpy(&guardian_ipv6_header,
+                guardian_message.data(), /*← Start at the char buffer.*/
+                sizeof(guardian_ipv6_header));
 
     // ------------------------------------------------------------------------
-    // Add group_id and sigil payload for packet.
+    // Construct IPv6 header for the packet.
     // ------------------------------------------------------------------------
+    constexpr size_t packet_size =
+        sizeof(struct ip6_hdr) + sizeof(struct udphdr) + packet_payload_size;
+
+    // The packet we'll send to the Guardian.
+    char packet[packet_size]{};
+
+    // The packet's IPv6 header.
+    auto* packet_ipv6_header = reinterpret_cast<struct ip6_hdr*>(packet);
+    // The packet's UDP header.
+    auto* packet_udp_header =
+        reinterpret_cast<struct udphdr*>(packet + sizeof(struct ip6_hdr));
+    // The packet's payload that we'll use to authenticate ourselves with the
+    // Guardian. Will contain the group ID and the sigil we got from Secret.
+    char* packet_payload =
+        packet + sizeof(struct ip6_hdr) + sizeof(struct udphdr);
+
+    // An IPv6 header is always 40B (320b) in size.
+    // --- Flow label ---
+    // - Version(4b) = 6,
+    // - Traffic Class(8b) = 0,
+    // - Flow Label(20b) = 0,
+    packet_ipv6_header->ip6_flow = htonl(6u << (8 + 20));
+
+    // - Payload Length(16b) = The *payload* length, ∴ this excludes the
+    //   header. Here, the payload is a UDP datagram = UDP header + UDP payload.
+    packet_ipv6_header->ip6_plen =
+        htons(sizeof(struct udphdr) + packet_payload_size);
+
+    // - Next Header(8b) = “Which protocol header comes next after the IPv6
+    //   header?”
+    packet_ipv6_header->ip6_nxt = IPPROTO_UDP;
+
+    // - Hop Limit(8b) = Like if TTL (Time To Live) actually had a good name
+    //   that made sense. “Time To Live” has nothing to do with time.
+    packet_ipv6_header->ip6_hlim = 64; // A common convention/default.
+
+    // - Source IPv6 addrress (128b) = The destination address (us) we got from
+    //   the IPv6 Guardian header.
+    packet_ipv6_header->ip6_src = guardian_ipv6_header.ip6_dst;
+
+    // - Destination IPv6 address (128b) = The source address (the server) we
+    //   got from the IPv6 Guardian header.
+    packet_ipv6_header->ip6_dst = guardian_ipv6_header.ip6_src;
+
+    // ------------------------------------------------------------------------
+    // Extract the Guardian's UDP header that it gave us.
+    // ------------------------------------------------------------------------
+    // The UDP header from the guardian's message.
+    struct udphdr guardian_udp_header{};
+
+    // Copy the UDP header bytes into guardian_udp_header.
+    std::memcpy(&guardian_udp_header,
+                guardian_message.data() + sizeof(struct ip6_hdr),
+                /*↑ Start at the char buffer, after the IPv6 header.*/
+                sizeof(struct udphdr));
+
+    // ------------------------------------------------------------------------
+    // Construct UDP header for the packet.
+    // ------------------------------------------------------------------------
+    // NOTE: We don't use htons() here, since these are already raw bytes↓.
+    // Set the datagram's source port the the Guardian's destination port.
+    packet_udp_header->source = guardian_udp_header.dest;
+    // Set the datagram's destination port the the Guardian's source port
+    packet_udp_header->dest = guardian_udp_header.source;
+    // Set the datagram's total length (UDP datagram header + UDP datagram
+    // payload).
+    uint16_t datagram_length =
+        htons(sizeof(struct udphdr) + packet_payload_size);
+    packet_udp_header->len = datagram_length;
+    // ---------- UDP checksum ----------
+    // For IPv6, UDP normally requires a checksum. It's calculated over the
+    // IPv6 pseudo-header + UDP header + UDP payload.
+    /* Calculatd over this sequence:
+    ┌─────────────────────────────────┐
+    │       IPv6 pseudo-header        │
+    │ IPv6 source address        16 B │
+    │ IPv6 destination address   16 B │
+    │ UDP length                  4 B │
+    │ zero                        3 B │
+    │ Next Header (= UDP)         1 B │
+    ├─────────────────────────────────┤
+    │            The rest             │
+    │ UDP source port             2 B │
+    │ UDP destination port        2 B │
+    │ UDP length                  2 B │
+    │ UDP checksum = 0            2 B │
+    │ UDP data                    5 B │
+    │ padding                     1 B │
+    └─────────────────────────────────┘
+    */
+    packet_udp_header->check = 0; // Make sure it's 0 before we start.
+    // ----- 1. Gather the data -----
+    // --- IPv6 pseudo-header ---
+    // Size of the checksum data buffer.
+    constexpr size_t checksum_data_size =
+        ipv6_header_size + sizeof(struct udphdr) + packet_payload_size;
+    // The temporary checksum data buffer.
+    char checksum_data[checksum_data_size]{};
+    // Copy IPv6 source address.
+    std::memcpy(checksum_data, &packet_ipv6_header->ip6_src, 16);
+    // IPv6 destination address.
+    std::memcpy(checksum_data + 16, &packet_ipv6_header->ip6_dst, 16);
+    // Copy the UDP (datagram) length.
+    std::memcpy(checksum_data + 32, &datagram_length, sizeof(datagram_length));
+    // zero: Next three bytes are already 0.
+    // Set Next Header (= UDP).
+    checksum_data[39] = IPPROTO_UDP;
+    // --- The rest ---
+    // --- 2. Populate the payload. ---
+    // Copy the group ID.
+    packet_payload[0] = group_id;
+    // Copy the sigil.
+    std::memcpy(packet_payload + 1, &sigil, sizeof(sigil));
+    // Copy the UDP header.
+    std::memcpy(checksum_data + ipv6_header_size, packet_udp_header,
+                sizeof(struct udphdr));
+    // Copy UDP data (here we add our payload).
+    std::memcpy(checksum_data + ipv6_header_size + sizeof(struct udphdr),
+                packet_payload, packet_payload_size);
+
+    // ----- 3. Calculate the checksum -----
+    uint16_t udp_checksum = calculate_internet_checksum(
+        reinterpret_cast<const uint8_t*>(checksum_data), sizeof(checksum_data));
+    // For the rare edge case. If the UDP checksum = 0, that has a special
+    // meaning, so we set it to 0xFFFF instead.
+    if (udp_checksum == 0) {
+        udp_checksum = 0xFFFF;
+    }
+    // ----- 4. Set the checksum -----
+    packet_udp_header->check = htons(udp_checksum);
 
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
