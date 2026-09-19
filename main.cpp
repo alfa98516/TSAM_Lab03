@@ -394,8 +394,30 @@ Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
+    // Get the Guardian's message.
+    // ------------------------------------------------------------------------
+    // The returned guardian message/data payload.
+    const std::string guardian_message = send_recv(ip_addr, port, "payload", 7);
+
+    // ------------------------------------------------------------------------
     // Extract the Guardian's IPv6 header that it gave us.
     // ------------------------------------------------------------------------
+    // First, extract the IPv6 header from the guardian's message:
+    constexpr size_t ipv6_header_size = 40;
+
+    // Verify the size.
+    if (guardian_message.size() < ipv6_header_size) {
+        std::cerr << "Guardian mesage size is too small for an IPv6 header";
+        return;
+    }
+
+    // The IPv6 header from the Guardian's message.
+    struct ip6_hdr guardian_ipv6_header{};
+    // Extract the IPv6 header bytes from the string.
+    std::string header_bytes = guardian_message.substr(0, ipv6_header_size);
+    // Copy the IPv6 header bytes into the ip6_hdr struct.
+    std::memcpy(&guardian_ipv6_header, header_bytes.data(),
+                sizeof(guardian_ipv6_header));
 
     // ------------------------------------------------------------------------
     // Construct IPv6 header for the packet.
@@ -424,11 +446,11 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
 
     // - Source IPv6 addrress (128b) = The destination address (us) we got from
     //   the IPv6 Guardian header.
-    // ipv6_header.ip6_src =
+    ipv6_header.ip6_src = guardian_ipv6_header.ip6_src;
 
     // - Destination IPv6 address (128b) = The source address (the server) we
     //   got from the IPv6 Guardian header.
-    // ipv6_header.ip6_dst =
+    ipv6_header.ip6_dst = guardian_ipv6_header.ip6_dst;
 
     // ------------------------------------------------------------------------
     // Construct UDP header for the packet.
