@@ -611,6 +611,9 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // ------------------------------------------------------------------------
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
     // ------------------------------------------------------------------------
+    const std::string guardian_response =
+        send_recv(ip_addr, port, packet, packet_size);
+    std::cout << "\nGuardian's response:\n" << guardian_response << '\n';
 
     // ------------------------------------------------------------------------
     // Send the packet (well, ackthually, it's a datagram, since it's UDP ☝️🤓).
@@ -650,6 +653,20 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Check if we got the right response message.
     // ------------------------------------------------------------------------
 }
+
+/*
+Hail, traveler! I am D.R.A.G.O.N. - the Dwemer Relay Apparatus for Guarded
+Online Networks. What aid do you seek?
+Provide me with a list of secret ports, separated by commas, and I shall guide
+you through the exact sequence of "knocks" required to open the portal.
+How to wield D.R.A.G.O.N.:
+Each "knock" must contain your group ID and S.E.C.R.E.T. sigil followed by the
+secret phrase.
+A word of counsel: To uncover the hidden ports and the phrases bound to them,
+begin by completing the trials upon the ports revealed by your port-scanning
+scrying.
+Happy hunting, adventurer - and may your path lead to Sovngarde!
+*/
 void solve_puzzle_dragon() {}
 
 /**
