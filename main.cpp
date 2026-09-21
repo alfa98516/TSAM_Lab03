@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <array>
+#include <cctype>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
@@ -14,6 +15,8 @@
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <ratio>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -66,106 +69,102 @@ int parse_port(const char* argument, int argument_number) {
     return -1;
 }
 
+bool matches_guardian_conversation(const std::string& response,
+                                   const std::string& greeting);
+
 /**
- * @brief Simple send recieve loop, sends 5 packets to an IP address and port,
- * and then returns the message recieved.
- *
- * @param ip_addr: The IP address you want to send to.
- * @param port: The port you want to send to.
- * @param msg: The message you want to send to the port.
- * @returns: A string
+ * @brief Wait for a reply from a port. For Guardian, skip the decoy replies.
+ * @param socket_fd The socket file descriptor to listen on.
+ * @param ip_addr The IP address of the sender to match.
+ * @param port The port number of the sender to match. If 0, any port is
+ * accepted.
+ * @param guardian_message The greeting to match, only used for Guardian.
+ * @return The reply message, or "NO_RESPONSE" if no reply was received within
+ * 2 seconds, or "ERROR" if an error occurred.
  */
-std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
-                      size_t msg_length, int attempts = 5) {
-    if (port < 0 || port > 65535) {
-        std::cerr << "Port numbers range between 0 and 65535\n";
-        return "ERROR";
-    }
-    if (msg == nullptr) {
-        std::cerr << "Message is null\n";
-        return "ERROR";
-    }
-
-    timeval timeout{};
-    timeout.tv_sec = 1;
-
-    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socket_fd < 0) {
-        perror("Error Creating socket!");
-        close(socket_fd);
-        return "ERROR";
-    }
-
-    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
-                   sizeof(timeout)) < 0) {
-        close(socket_fd);
-        return "ERROR";
-    }
-
+std::string receive_message(int socket_fd, const sockaddr_in& ip_addr, int port,
+                            const std::string& guardian_message = "") {
     char data_buffer[2048];
-    socklen_t src_addr_len = sizeof(ip_addr);
-
-    for (int i = 0; i < attempts; i++) {
-        ip_addr.sin_port = htons(port);
-        if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
-                   src_addr_len) < 0) {
+    auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(2)) {
+        sockaddr_in sender{};
+        socklen_t sender_length = sizeof(sender);
+        ssize_t received =
+            recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
+                     (struct sockaddr*)&sender, &sender_length);
+        if (received < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return "NO_RESPONSE";
+            }
+            perror("Receiving message failed");
+            return "ERROR";
+        }
+        if (sender.sin_addr.s_addr != ip_addr.sin_addr.s_addr ||
+            (port != 0 && ntohs(sender.sin_port) != port)) {
             continue;
         }
-        while (true) {
-            ssize_t nbytes_recieved =
-                recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
-                         (struct sockaddr*)&ip_addr, &src_addr_len);
-            if (nbytes_recieved < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    std::cout << "No response from port " << port << '\n';
-                    break;
-                }
-                continue;
-            } else {
-                if (nbytes_recieved >= 2048) {
-                    close(socket_fd);
-                    std::cerr << "thats too many bytes man\n";
-                    return "ERROR";
-                }
-
-                close(socket_fd);
-                return std::string(data_buffer, nbytes_recieved);
-            }
+        std::string response(data_buffer, received);
+        if (!guardian_message.empty() &&
+            !matches_guardian_conversation(response, guardian_message)) {
+            continue;
         }
-        close(socket_fd);
-        return "NO_RESPONSE";
+        return response;
     }
+    return "NO_RESPONSE";
+}
 
-    // for (int i = 0; i < attempts; i++) {
-    //     ip_addr.sin_port = htons(port);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    //     if (sendto(socket_fd, msg, msg_length, 0, (struct sockaddr*)&ip_addr,
-    //                src_addr_len) < 0) {
-    //         continue;
-    //     }
-    // }
-    //
-    // while (true) {
-    //     ssize_t nbytes_recieved =
-    //         recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
-    //                  (struct sockaddr*)&ip_addr, &src_addr_len);
-    //     if (nbytes_recieved < 0) {
-    //         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-    //             std::cout << "No response from port " << port << '\n';
-    //             break;
-    //         }
-    //         continue;
-    //     } else {
-    //         if (nbytes_recieved >= 2048) {
-    //             close(socket_fd);
-    //             return "ERROR";
-    //         }
-    //         close(socket_fd);
-    //         return std::string(data_buffer, nbytes_recieved);
-    //     }
-    // }
-    // close(socket_fd);
-    // return "NO_RESPONSE";
+/**
+ * @brief Send a UDP message and wait for its reply, retrying if needed.
+ * @param socket_fd An existing socket, or -1 to open and close one here.
+ * @param guardian_message The greeting to match, only used for Guardian.
+ * @return The reply message, or "NO_RESPONSE" if no reply was received within
+ * 2 seconds, or "ERROR" if an error occurred.
+ */
+std::string send_recv(sockaddr_in& ip_addr, int port, const char* msg,
+                      size_t msg_length, int attempts = 5, int socket_fd = -1,
+                      const std::string& guardian_message = "") {
+    if (port < 1 || port > 65535 || msg == nullptr) {
+        std::cerr << "Invalid port or message\n";
+        return "ERROR";
+    }
+    bool own_socket = socket_fd == -1;
+    if (own_socket) {
+        socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    }
+    if (socket_fd < 0) {
+        perror("Error creating socket");
+        return "ERROR";
+    }
+    timeval timeout{};
+    timeout.tv_sec = 2;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                   sizeof(timeout)) < 0) {
+        if (own_socket) {
+            close(socket_fd);
+        }
+        return "ERROR";
+    }
+    sockaddr_in destination = ip_addr;
+    destination.sin_port = htons(port);
+    std::string response = "NO_RESPONSE";
+    for (int i = 0; i < attempts; i++) {
+        if (sendto(socket_fd, msg, msg_length, 0,
+                   (struct sockaddr*)&destination, sizeof(destination)) < 0) {
+            response = "ERROR";
+            continue;
+        }
+        response = receive_message(socket_fd, ip_addr, port, guardian_message);
+        if (response != "NO_RESPONSE" && response != "ERROR") {
+            break;
+        }
+    }
+    if (own_socket) {
+        close(socket_fd);
+    }
+    return response;
 }
 
 /*
@@ -189,6 +188,13 @@ Here are the rites required to gain access to the secret I guard:
 7. Keep your group ID and sigil safe for future trials, for other ports
    shall require them. But beware: do not write them in stone!
 */
+
+/**
+ * @brief Solve the S.E.C.R.E.T. puzzle by sending the required messages and
+ * receiving the hidden port.
+ * @param ip_addr The IP address of the S.E.C.R.E.T. server.
+ * @param port The port number of the S.E.C.R.E.T. server.
+ */
 void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     constexpr uint32_t secret_number = (1u << 31) - 1;
     // fun fact, this is a prime,
@@ -196,12 +202,14 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     // Where Mersenne prime is the collection of primes of the form 2^n - 1
     char payload_1[1024] = "S.E.C.R.E.T.:alfar24,gislih24,hlynurh24";
     int offset = 39;
-    payload_1[offset] = (secret_number >> 24) & 0xFF;
-    payload_1[offset + 1] = (secret_number >> 16) & 0xFF;
-    payload_1[offset + 2] = (secret_number >> 8) & 0xFF;
-    payload_1[offset + 3] = secret_number & 0xFF;
+    const uint32_t network_secret = htonl(secret_number);
+    std::memcpy(payload_1 + offset, &network_secret, sizeof(network_secret));
 
     std::string response = send_recv(ip_addr, port, payload_1, 43);
+    if (response.size() != 5) {
+        throw std::runtime_error(
+            "S.E.C.R.E.T. did not return a five-byte challenge");
+    }
     const char* cstr = response.c_str();
     group_id = cstr[0];
     char challenge_chr[4];
@@ -224,16 +232,29 @@ void solve_puzzle_secret(sockaddr_in& ip_addr, const int port) {
     payload_2[3] = (sigil >> 8) & 0xFF;
     payload_2[4] = sigil & 0xFF;
     std::string msg = send_recv(ip_addr, port, payload_2, 5);
-    const char* msgcstr = msg.c_str();
-
-    char secret_port[5];
-    for (int i = 0; i < 4; i++) {
-        secret_port[i] = msgcstr[i + 69];
+    const std::size_t last_digit = msg.find_last_of("0123456789");
+    if (last_digit == std::string::npos ||
+        msg.find("hidden port:") == std::string::npos) {
+        throw std::runtime_error("S.E.C.R.E.T. did not reveal a port: " + msg);
     }
-    secret_port[4] = '\0';
-    secret_ports.push_back(std::stoi(secret_port));
+    const std::size_t before_port =
+        msg.find_last_not_of("0123456789", last_digit);
+    const unsigned long start =
+        before_port == std::string::npos ? 0 : before_port + 1;
+    int hidden_port = std::stoi(msg.substr(start, last_digit - start + 1));
+    if (hidden_port < 1 || hidden_port > 65535) {
+        throw std::runtime_error("S.E.C.R.E.T. returned an invalid port");
+    }
+    secret_ports.push_back(hidden_port);
 }
 
+/**
+ * @brief Solve the Evil puzzle by sending a crafted UDP packet with the Evil
+ * Bit set and receiving the hidden port from the target.
+ * @param target_addr The sockaddr_in structure containing the target IP
+ * address.
+ * @param port The port number of the target to send the crafted packet to
+ */
 void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     int routing_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (routing_socket < 0) {
@@ -246,11 +267,12 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     route_probe_addr.sin_family = AF_INET;
     route_probe_addr.sin_port =
         htons(53); // I love DNS 😀 it allways works great for me
+    const char* google_dns_address = "8.8.8.8";
     int inet_pton_result =
-        inet_pton(AF_INET, "8.8.8.8", &route_probe_addr.sin_addr);
+        inet_pton(AF_INET, google_dns_address, &route_probe_addr.sin_addr);
 
     if (inet_pton_result == 0) {
-        std::cerr << "Invalid IPv4 address: " << "8.8.8.8"
+        std::cerr << "Invalid IPv4 address: " << google_dns_address
                   << '\n'; // This ain't gonna happen
         close(routing_socket);
         return;
@@ -275,14 +297,13 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     }
 
     // Creating socket for sending/reciving
-    char auth_payload[6];
+    char auth_payload[5];
 
     auth_payload[0] = group_id;
     auth_payload[1] = (sigil >> 24) & 0xFF;
     auth_payload[2] = (sigil >> 16) & 0xFF;
     auth_payload[3] = (sigil >> 8) & 0xFF;
     auth_payload[4] = sigil & 0xFF;
-    auth_payload[5] = '\0';
 
     int raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (raw_socket < 0) {
@@ -307,7 +328,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     }
 
     int packet_total_length =
-        sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(auth_payload);
+        sizeof(struct iphdr) + sizeof(struct udphdr) + sizeof(auth_payload);
 
     auto packet = new char[packet_total_length];
     memset(packet, 0, packet_total_length);
@@ -317,7 +338,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
     char* udp_payload_ptr = packet + sizeof(iphdr) + sizeof(udphdr);
     auto ip_header = (struct iphdr*)packet;
     auto udp_header = (struct udphdr*)(packet + sizeof(struct iphdr));
-    memcpy(udp_payload_ptr, auth_payload, strlen(auth_payload));
+    memcpy(udp_payload_ptr, auth_payload, sizeof(auth_payload));
 
     ip_header->version = 4;
     ip_header->ihl = 5;
@@ -366,7 +387,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
 #endif
     udp_header->source = htons(source_port);
     udp_header->dest = htons(port);
-    udp_header->len = htons(sizeof(struct udphdr) + strlen(auth_payload));
+    udp_header->len = htons(sizeof(struct udphdr) + sizeof(auth_payload));
 
     for (int i = 0; i < 5; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -413,6 +434,7 @@ void solve_puzzle_evil(sockaddr_in& target_addr, const int port) {
         }
     }
     close(raw_socket);
+    close(routing_socket);
     delete[] packet;
 }
 
@@ -463,6 +485,52 @@ uint16_t calculate_internet_checksum(const uint8_t* data, size_t length) {
     return static_cast<uint16_t>(~sum);
 }
 
+/**
+ * @brief Match the inner IPv6/UDP reply to the Guardian greeting, rejecting
+ * decoys.
+ * @param response The Guardian's reply to our packet.
+ * @param greeting The Guardian's greeting that we sent.
+ * @return True if the reply matches the greeting, false otherwise.
+ */
+bool matches_guardian_conversation(const std::string& response,
+                                   const std::string& greeting) {
+    if (constexpr size_t header_size = sizeof(ip6_hdr) + sizeof(udphdr);
+        response.size() < header_size || greeting.size() < header_size) {
+        return false;
+    }
+    // Copy the IPv6 and UDP headers from the response and greeting into
+    // separate structs for easier comparison.
+    struct ip6_hdr response_ipv6_header{};
+    struct ip6_hdr greeting_ipv6_header{};
+    struct udphdr response_udp_header{};
+    struct udphdr greeting_udp_header{};
+    std::memcpy(&response_ipv6_header, response.data(), sizeof(ip6_hdr));
+    std::memcpy(&greeting_ipv6_header, greeting.data(), sizeof(ip6_hdr));
+    std::memcpy(&response_udp_header, response.data() + sizeof(ip6_hdr),
+                sizeof(udphdr));
+    std::memcpy(&greeting_udp_header, greeting.data() + sizeof(ip6_hdr),
+                sizeof(udphdr));
+
+    // Check that the response is a valid IPv6/UDP packet with the correct flow
+    // label, next header, and lengths. Also, ensure that the source and
+    // destination addresses and ports match those of the greeting.
+    if ((ntohl(response_ipv6_header.ip6_flow) >> 28) != 6 ||
+        response_ipv6_header.ip6_nxt != IPPROTO_UDP ||
+        ntohs(response_udp_header.len) < sizeof(udphdr) ||
+        response_ipv6_header.ip6_plen != response_udp_header.len ||
+        response.size() !=
+            sizeof(ip6_hdr) + ntohs(response_ipv6_header.ip6_plen)) {
+        return false;
+    }
+    // The reply comes from the same inner addresses and ports as the greeting.
+    return std::memcmp(&response_ipv6_header.ip6_src,
+                       &greeting_ipv6_header.ip6_src, sizeof(in6_addr)) == 0 &&
+           std::memcmp(&response_ipv6_header.ip6_dst,
+                       &greeting_ipv6_header.ip6_dst, sizeof(in6_addr)) == 0 &&
+           response_udp_header.source == greeting_udp_header.source &&
+           response_udp_header.dest == greeting_udp_header.dest;
+}
+
 /*e�{l�;�.
 �g�"�KY���.?�Wr�4eT�Anv1V9�O�l݆I am the guardian of the secret spell. The lords
 of the network do not want us to use these newer scrolls (IPv6), but I found a
@@ -484,7 +552,7 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Extract the Guardian's IPv6 header that it gave us.
     // ------------------------------------------------------------------------
     // Verify the size.
-    if (guardian_message.size() < ipv6_header_size) {
+    if (guardian_message.size() < ipv6_header_size + sizeof(struct udphdr)) {
         std::cerr << "Guardian mesage size is too small for an IPv6 header";
         return;
     }
@@ -606,8 +674,12 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     std::memcpy(checksum_data, &packet_ipv6_header->ip6_src, 16);
     // IPv6 destination address.
     std::memcpy(checksum_data + 16, &packet_ipv6_header->ip6_dst, 16);
-    // Copy the UDP (datagram) length.
-    std::memcpy(checksum_data + 32, &datagram_length, sizeof(datagram_length));
+    // The UDP length is the size of the UDP header + the UDP payload.
+    uint32_t pseudo_header_length =
+        htonl(sizeof(struct udphdr) + packet_payload_size);
+    // Copy the UDP length.
+    std::memcpy(checksum_data + 32, &pseudo_header_length,
+                sizeof(pseudo_header_length));
     // zero: Next three bytes are already 0.
     // Set Next Header (= UDP).
     checksum_data[39] = IPPROTO_UDP;
@@ -643,23 +715,29 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // Put the IPv6 header + UDP datagram *inside* of the packet's payload.
     // ------------------------------------------------------------------------
     const std::string guardian_response =
-        send_recv(ip_addr, port, packet, packet_size);
-    std::cout << "\nGuardian's response:\n" << guardian_response << '\n';
-    bool quote_found = false;
-    for (auto g_char : guardian_response) {
-        if (g_char == '"') {
-            std::cout << "Quote found, baby! :D" << '\n';
-            if (quote_found) {
-                break;
-            }
-            quote_found = true;
-            continue;
-        }
-        if (quote_found) {
-            secret_phrase += g_char;
-        }
+        send_recv(ip_addr, port, packet, packet_size, 5, -1, guardian_message);
+
+    // The response includes binary IPv6/UDP headers, which can contain a quote
+    // byte by chance. Only search the actual text payload for the spell.
+    const size_t text_offset = sizeof(struct ip6_hdr) + sizeof(struct udphdr);
+    if (guardian_response.size() < text_offset) {
+        throw std::runtime_error(
+            "Guardian response is missing its IPv6/UDP headers");
     }
-    std::cout << "Secret phrase!!!!!!!!!!!!: " << secret_phrase << '\n';
+    std::cout << "\nGuardian's response:\n"
+              << guardian_response.substr(text_offset) << '\n';
+    const std::size_t first_quote = guardian_response.find('"', text_offset);
+    const std::size_t last_quote =
+        first_quote == std::string::npos
+            ? std::string::npos
+            : guardian_response.find('"', first_quote + 1);
+    if (first_quote == std::string::npos || last_quote == std::string::npos) {
+        throw std::runtime_error(
+            "Guardian did not reveal a quoted secret phrase");
+    }
+    secret_phrase =
+        guardian_response.substr(first_quote + 1, last_quote - first_quote - 1);
+    std::cout << "Secret phrase: " << secret_phrase << '\n';
     // ------------------------------------------------------------------------
     // Send the packet (well, ackthually, it's a datagram, since it's UDP ☝️🤓).
     //
@@ -712,58 +790,116 @@ begin by completing the trials upon the ports revealed by your port-scanning
 scrying.
 Happy hunting, adventurer - and may your path lead to Sovngarde!
 */
-void solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
-    // Convert
+
+/**
+ * @brief Parse and validate Dragon's CSV, preserving repeated ports and order.
+ * @param response The Dragon puzzle's response to our knock sequence request.
+ * @return A vector of ports to knock on, in order.
+ */
+std::vector<int> parse_knock_sequence(const std::string& response) {
+    std::vector<int> ports;
+    std::istringstream input(response);
+    while (true) {
+        input >> std::ws;
+        if (!std::isdigit(input.peek())) {
+            throw std::runtime_error("Dragon did not return a port sequence: " +
+                                     response);
+        }
+        int port = 0;
+        if (!(input >> port) || port < 1 || port > 65535) {
+            throw std::runtime_error("Invalid port in Dragon sequence");
+        }
+        ports.push_back(port);
+        input >> std::ws;
+        if (input.eof()) {
+            return ports;
+        }
+        if (input.get() != ',') {
+            throw std::runtime_error("Invalid separator in Dragon sequence");
+        }
+    }
+}
+
+/**
+ * @brief Serialize group ID, network-order sigil and phrase without a
+ * terminator.
+ * @return Serialized knock payload.
+ */
+std::string make_knock_payload() {
+    std::string payload(5, '\0');
+    payload[0] = static_cast<char>(group_id);
+    uint32_t network_sigil = htonl(sigil);
+    std::memcpy(payload.data() + 1, &network_sigil, sizeof(network_sigil));
+    payload += secret_phrase;
+    return payload;
+}
+
+/**
+ * @brief Request Dragon's sequence and wait for a reply to each knock.
+ * @param ip_addr The IPv4 address of the Dragon puzzle.
+ * @param port The UDP port of the Dragon puzzle.
+ * @return True if the Dragon puzzle was solved successfully, false otherwise.
+ */
+bool solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
+    if (secret_ports.size() < 2 || secret_phrase.empty()) {
+        std::cerr << "Dragon needs both secret ports and the secret phrase\n";
+        return false;
+    }
     std::string dragon_payload;
-    for (std::size_t i = 0; i < secret_ports.size(); ++i) {
+    for (size_t i = 0; i < secret_ports.size(); i++) {
         if (i != 0) {
             dragon_payload += ',';
         }
         dragon_payload += std::to_string(secret_ports[i]);
     }
-    std::cout << "\nThe Dragon payload: " << dragon_payload << '\n';
 
-    std::string dragon_response = send_recv(
-        ip_addr, port, dragon_payload.c_str(), dragon_payload.length());
-    std::cout << "\nThe Dragon response: " << dragon_response << '\n';
-    // Payload we'll use for the knocks.
-    std::cout << "\nSecret phrase length: " << secret_phrase.length() << '\n';
-    size_t knock_payload_size = 5 + secret_phrase.length();
-    char knock_payload[knock_payload_size]{};
-    // --- 2. Populate the payload. ---
-    // Copy the group ID.
-    knock_payload[0] = group_id;
-    // Copy the sigil.
-    uint32_t network_sigil = htonl(sigil);
-    std::memcpy(knock_payload + 1, &network_sigil, sizeof(network_sigil));
-    // Copy the secret spell/phrase into the payload.
-    std::memcpy(knock_payload + 1 + sizeof(network_sigil),
-                secret_phrase.c_str(), secret_phrase.length());
-    std::cout << "\nThe knock payload: " << knock_payload << '\n';
-    // Change string, e.g., "4012,4033,4033,4033,4012,4012", to a vector of
-    // integers:
-    std::vector<std::string> knock_ports;
-    std::string current_port = "";
-    for (auto character : dragon_response) {
-        if (character == ',') {
-            knock_ports.push_back(current_port);
-            current_port = "";
-            continue;
+    // Use one socket for the whole sequence so our source port stays the same.
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0) {
+        perror("Error creating Dragon socket");
+        return false;
+    }
+    std::cout << "\nThe Dragon payload: " << dragon_payload << '\n';
+    std::string dragon_response =
+        send_recv(ip_addr, port, dragon_payload.data(), dragon_payload.size(),
+                  1, socket_fd);
+    std::cout << "The Dragon response: " << dragon_response << '\n';
+    std::vector<int> knock_ports;
+    try {
+        knock_ports = parse_knock_sequence(dragon_response);
+    } catch (const std::runtime_error& error) {
+        std::cerr << error.what() << '\n';
+        close(socket_fd);
+        return false;
+    }
+    std::string knock_payload = make_knock_payload();
+    std::string knock_response;
+    for (int knock_port : knock_ports) {
+        // Only send once. Retrying a knock could mess up the sequence.
+        knock_response = send_recv(ip_addr, knock_port, knock_payload.data(),
+                                   knock_payload.size(), 1, socket_fd);
+        std::cout << "Knock response: " << knock_response << '\n';
+        if (knock_response == "ERROR" || knock_response == "NO_RESPONSE") {
+            close(socket_fd);
+            return false;
         }
-        current_port += character;
     }
-    knock_ports.push_back(current_port);
-    // std::cout << "\nKnock ports whateverrr: \n";
-    // for (const std::string& fucker : knock_ports) {
-    //     std::cout << fucker << '\n';
-    // }
-    // Do the knocks on the ports:
-    for (const std::string& knock_port : knock_ports) {
-        std::cout << knock_port << '\n';
-        std::string knock_response = send_recv(
-            ip_addr, stoi(knock_port), knock_payload, sizeof(knock_payload), 1);
-        std::cout << "\nKnock response: " << knock_response << '\n';
+    std::string victory_message =
+        "Group " + std::to_string(group_id) +
+        " has solved every puzzle and claimed victory!";
+    bool is_solved = knock_response.find(victory_message) != std::string::npos;
+    if (is_solved) {
+        // The bonus instructions arrive in a separate message.
+        std::string extra_message = receive_message(socket_fd, ip_addr, 0);
+        while (extra_message != "NO_RESPONSE" && extra_message != "ERROR") {
+            std::cout << "Additional message: " << extra_message << '\n';
+            extra_message = receive_message(socket_fd, ip_addr, 0);
+        }
+    } else {
+        std::cerr << "Dragon did not confirm that the sequence was correct\n";
     }
+    close(socket_fd);
+    return is_solved;
 }
 
 /**
@@ -803,6 +939,10 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
             puzzle_ports.insert({"DRAGON", ports[i]});
         }
     }
+    if (puzzle_ports.size() != 4) {
+        throw std::runtime_error(
+            "Could not identify all four puzzle ports; rerun the scanner");
+    }
     solve_puzzle_secret(ip_addr, puzzle_ports.find("SECRET")->second);
     std::this_thread::sleep_for(std::chrono::milliseconds(3));
     solve_puzzle_evil(ip_addr, puzzle_ports.find("EVIL")->second);
@@ -811,7 +951,9 @@ void assign_puzzle_to_port(sockaddr_in& ip_addr,
     solve_puzzle_guardian(ip_addr, puzzle_ports.find("GUARDIAN")->second);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3));
-    solve_puzzle_dragon(ip_addr, puzzle_ports.find("DRAGON")->second);
+    if (!solve_puzzle_dragon(ip_addr, puzzle_ports.find("DRAGON")->second)) {
+        throw std::runtime_error("Dragon puzzle failed");
+    }
 }
 
 } // namespace
@@ -854,5 +996,11 @@ int main(int argc, const char* argv[]) {
     }
 
     // std::array<std::pair<std::string, int>, 4> puzzle_ports =
-    assign_puzzle_to_port(dest_addr, input_ports);
+    try {
+        assign_puzzle_to_port(dest_addr, input_ports);
+    } catch (const std::exception& error) {
+        std::cerr << "Puzzle failed: " << error.what() << '\n';
+        return 1;
+    }
+    return 0;
 }
