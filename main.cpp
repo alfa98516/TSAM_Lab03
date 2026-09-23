@@ -73,7 +73,7 @@ bool matches_guardian_conversation(const std::string& response,
                                    const std::string& greeting);
 
 /**
- * @brief Wait for a reply from a port. For Guardian, skip the decoy replies.
+ * @brief Wait for a reply from a port. (For Guardian, skip the decoy replies.)
  * @param socket_fd The socket file descriptor to listen on.
  * @param ip_addr The IP address of the sender to match.
  * @param port The port number of the sender to match. If 0, any port is
@@ -92,10 +92,10 @@ std::string receive_message(int socket_fd, const sockaddr_in& ip_addr, int port,
     // passed.
     while (std::chrono::steady_clock::now() - start < std::chrono::seconds(2)) {
         // Receive a message from the socket, storing the sender's address in
-        // sender.
+        // `sender`.
         sockaddr_in sender{};
         socklen_t sender_length = sizeof(sender);
-        // Use recvfrom() to receive a message from the socket. This function
+        // Use `recvfrom()` to receive a message from the socket. This function
         // will block until a message is received or the timeout is reached.
         ssize_t bytes_received =
             recvfrom(socket_fd, data_buffer, sizeof(data_buffer), 0,
@@ -546,9 +546,11 @@ uint16_t calculate_internet_checksum(const uint8_t* data, size_t length) {
  */
 bool matches_guardian_conversation(const std::string& response,
                                    const std::string& greeting) {
+    // Check that both the response and greeting are large enough to contain an
+    // IPv6 header and a UDP header.
     if (constexpr size_t header_size = sizeof(ip6_hdr) + sizeof(udphdr);
         response.size() < header_size || greeting.size() < header_size) {
-        return false;
+        return false; // If either is too small, return false.
     }
     // Copy the IPv6 and UDP headers from the response and greeting into
     // separate structs to make comparison easier.
@@ -566,21 +568,23 @@ bool matches_guardian_conversation(const std::string& response,
     // Check that the response is a valid IPv6/UDP packet with the correct flow
     // label, next header, and lengths. Also, ensure that the source and
     // destination addresses and ports match those of the greeting.
-    if ((ntohl(response_ipv6_header.ip6_flow) >> 28) != 6 ||
-        response_ipv6_header.ip6_nxt != IPPROTO_UDP ||
-        ntohs(response_udp_header.len) < sizeof(udphdr) ||
-        response_ipv6_header.ip6_plen != response_udp_header.len ||
-        response.size() !=
-            sizeof(ip6_hdr) + ntohs(response_ipv6_header.ip6_plen)) {
+    if (((ntohl(response_ipv6_header.ip6_flow) >> 28) != 6) ||
+        (response_ipv6_header.ip6_nxt != IPPROTO_UDP) ||
+        (ntohs(response_udp_header.len) < sizeof(udphdr)) ||
+        (response_ipv6_header.ip6_plen != response_udp_header.len) ||
+        (response.size() !=
+         sizeof(ip6_hdr) + ntohs(response_ipv6_header.ip6_plen))) {
         return false;
     }
     // The reply comes from the same inner addresses and ports as the greeting.
-    return std::memcmp(&response_ipv6_header.ip6_src,
-                       &greeting_ipv6_header.ip6_src, sizeof(in6_addr)) == 0 &&
-           std::memcmp(&response_ipv6_header.ip6_dst,
-                       &greeting_ipv6_header.ip6_dst, sizeof(in6_addr)) == 0 &&
-           response_udp_header.source == greeting_udp_header.source &&
-           response_udp_header.dest == greeting_udp_header.dest;
+    return (std::memcmp(&response_ipv6_header.ip6_src,
+                        &greeting_ipv6_header.ip6_src,
+                        sizeof(in6_addr)) == 0) &&
+           (std::memcmp(&response_ipv6_header.ip6_dst,
+                        &greeting_ipv6_header.ip6_dst,
+                        sizeof(in6_addr)) == 0) &&
+           (response_udp_header.source == greeting_udp_header.source) &&
+           (response_udp_header.dest == greeting_udp_header.dest);
 }
 
 /*e�{l�;�.
@@ -591,6 +595,14 @@ Respond in the same manner and tell who you are! Send me a 5-byte message with
 your group id and sigil you got from S.E.C.R.E.T.
 Make sure to wrap the scrolls the same way I did and don't forget to address
 them accordingly.*/
+
+/**
+ * @brief Solve the Guardian puzzle by sending a crafted IPv6/UDP packet with
+ * the Guardian's message and receiving the hidden port from the Guardian.
+ * @param ip_addr The sockaddr_in structure containing the Guardian's IP
+ * address.
+ * @param port The port number of the Guardian to send the crafted packet to.
+ */
 void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     constexpr size_t ipv6_header_size = 40;
     constexpr size_t packet_payload_size = 5;
@@ -782,11 +794,10 @@ void solve_puzzle_guardian(sockaddr_in& ip_addr, const int port) {
     // double quotes around it. Find the first and last quote characters in the
     // text payload, and extract the secret phrase between them.
     const std::size_t first_quote = guardian_response.find('"', text_offset);
-    const std::size_t last_quote =
-        first_quote == std::string::npos
-            ? std::string::npos
-            : guardian_response.find('"', first_quote + 1);
-    // TODO: ↑ do this differently...
+    std::size_t last_quote = std::string::npos;
+    if (first_quote != std::string::npos) {
+        last_quote = guardian_response.find('"', first_quote + 1);
+    }
     // Check if we found both quotes. If not, throw an error indicating that
     // the Guardian did not reveal a quoted secret phrase.
     if (first_quote == std::string::npos || last_quote == std::string::npos) {
@@ -864,15 +875,15 @@ std::vector<int> parse_knock_sequence(const std::string& response) {
  */
 std::string make_knock_payload() {
     // The knock payload consists of:
-    // - 1 byte for the group ID
-    // - 4 bytes for the sigil in network byte order
-    // - The secret phrase as a string (without a null terminator)
+    // - 1 byte for the group ID,
+    // - 4 bytes for the sigil in network byte order,
+    // - The secret phrase as a string (without a null terminator).
     std::string payload(5, '\0'); // Reserve space for group ID and sigil.
     payload[0] = static_cast<char>(group_id); // Set first byte as the group ID.
     uint32_t network_sigil = htonl(sigil);    // Convert sigil to NBO.
     // Copy the network-order sigil into the payload starting at index 1.
     std::memcpy(payload.data() + 1, &network_sigil, sizeof(network_sigil));
-    // Append the secret phrase to the payload. (Does not include a null
+    // Append the secret phrase to the payload. (Does *not* include a null
     // terminator, as the protocol expects the phrase to be sent as-is.)
     payload += secret_phrase;
     return payload;
@@ -955,7 +966,7 @@ bool solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
     // TODO
     if (is_solved) {
         std::string extra_message = receive_message(socket_fd, ip_addr, 0);
-        while (extra_message != "NO_RESPONSE" && extra_message != "ERROR") {
+        while ((extra_message != "NO_RESPONSE") && (extra_message != "ERROR")) {
             std::cout << "Additional message: " << extra_message << '\n';
             extra_message = receive_message(socket_fd, ip_addr, 0);
         }
@@ -969,9 +980,9 @@ bool solve_puzzle_dragon(sockaddr_in& ip_addr, uint32_t port) {
 /**
  * @brief Functions that assigns each port to the given problem
  * @param ip_addr The IPv4 address of the target machine.
- * @return returns an array which is indexed with each problem,
- * example; the port with problem a is in index 0 of the array,
- * problem b is in index 1, etc.
+ * @return returns an array which is indexed with each problem, example; the
+ * port with problem a is in index 0 of the array, problem b is in index 1,
+ * etc.
  */
 void assign_puzzle_to_port(sockaddr_in& ip_addr,
                            const std::array<int, 4>& ports) {
