@@ -48,7 +48,7 @@
 uint32_t sigil;
 uint8_t group_id;
 std::vector<int> secret_ports;
-std::string secret_phrase; // Fuck J.K. Rowling.
+std::string secret_phrase; 
 
 namespace {
 
